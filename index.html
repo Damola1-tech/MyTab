@@ -138,7 +138,7 @@
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    /* ================= SUPABASE (background sync only — never blocks the UI) ================= */
+    /* ================= SUPABASE (background sync only, never blocks the UI) ================= */
     const SUPABASE_URL = "https://hbdxnixgkqsxkoksdacf.supabase.co";
     const SUPABASE_KEY = "sb_publishable_2A10f28AhjULRYBIqSSk2A_QRoF2vu4";
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -300,12 +300,12 @@
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) return JSON.parse(raw);
-      } catch (e) { /* localStorage unavailable (e.g. this preview) — data stays in-memory only */ }
+      } catch (e) { /* localStorage unavailable (e.g. this preview), data stays in-memory only */ }
       return [];
     }
     function saveDebtors() {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(debtors)); }
-      catch (e) { /* storage unavailable — data stays in-memory only for this session */ }
+      catch (e) { /* storage unavailable, data stays in-memory only for this session */ }
     }
 
     /* ---------- helpers ---------- */
@@ -354,7 +354,21 @@
       if (bal === 0) return "green";
       return oldestUnpaidDays(d) > 14 ? "red" : "yellow";
     }
-    function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 40); } catch (e) {} }
+    let audioCtx = null;
+    function beep() {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+      } catch (e) { /* audio unavailable, silently skip */ }
+    }
+    function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 40); } catch (e) {} beep(); }
 
     const icon = {
       plus: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
@@ -394,7 +408,7 @@
     // or straight to "pinlock" -> "app" if this device already has a business set up.
     let stage = !isOnboarded() ? "splash" : (getBusinessMeta().pin ? "pinlock" : "app");
     let loginIdentifier = "", loginPin = "", loginError = "", loginBusy = false;
-    let pendingIdentifier = null; // { column, value } — carried from login into onboarding when no match is found
+    let pendingIdentifier = null; // { column, value }, carried from login into onboarding when no match is found
     let onbName = "", onbType = businessTypes[0], onbPin = "", onbError = "", onbBusy = false;
     let pinInput = "", pinError = "";
 
@@ -737,7 +751,7 @@
       loginBusy = true; render();
 
       if (!navigator.onLine) {
-        // Offline with no local business yet — nothing to pull down, so start fresh.
+        // Offline with no local business yet, nothing to pull down, so start fresh.
         loginBusy = false;
         pendingIdentifier = identifier;
         stage = "onboarding";
@@ -757,7 +771,7 @@
         return;
       }
 
-      // Found an existing business for this phone/email — pull its data down to this device.
+      // Found an existing business for this phone/email, pull its data down to this device.
       const { debtors: pulled, error: pullErr } = await pullBusinessData(business.id);
       if (pullErr) { loginError = "Found your business but couldn't load your data, try again."; render(); return; }
 
