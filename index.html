@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MyTab · Put it on your tab</title>
+<meta name="description" content="Track who owes you, offline-friendly, built for a busy market." />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap');
+  :root {
+    --bg:#F6F1E4; --surface:#FFFDF8; --ink:#23301F; --ink-soft:#6A7361; --line:#E4DCC6;
+    --primary:#2F6B4F; --primary-dark:#1F4B37; --accent:#C6861D;
+    --red:#B3402D; --red-bg:#F5DFD9; --yellow:#B4790F; --yellow-bg:#F7EAC9; --green:#3F7D4D; --green-bg:#E1EEE3;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; }
+  body { min-height:100vh; background:linear-gradient(180deg,#EFE8D6 0%,var(--bg) 220px); display:flex; justify-content:center; padding:24px 12px; font-family:'Inter',sans-serif; color:var(--ink); }
+  #phone { width:100%; max-width:420px; min-height:740px; background:var(--surface); border-radius:22px; box-shadow:0 1px 0 rgba(35,48,31,0.06),0 20px 40px -24px rgba(35,48,31,0.35); overflow:hidden; position:relative; display:flex; flex-direction:column; border:1px solid var(--line); }
+  .screen { display:flex; flex-direction:column; flex:1; min-height:740px; }
+
+  .hero { background:var(--primary); color:#F3EFE1; padding:24px 20px 18px; }
+  .brand-name { font-family:'Source Serif 4',serif; font-weight:700; font-size:17px; opacity:0.9; }
+  .hero-label { font-size:12.5px; color:rgba(243,239,225,0.75); margin-top:10px; }
+  .hero-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:36px; }
+
+  .tabs { display:flex; gap:6px; margin:14px 18px 0; background:var(--bg); border-radius:10px; padding:4px; }
+  .tab { flex:1; border:none; background:transparent; padding:9px; border-radius:8px; font-weight:700; font-size:13px; color:var(--ink-soft); cursor:pointer; font-family:inherit; }
+  .tab--active { background:var(--surface); color:var(--primary); box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+
+  .searchbar { margin:12px 18px 0; display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .searchbar input { border:none; outline:none; background:transparent; font-size:14.5px; width:100%; font-family:inherit; color:var(--ink); }
+
+  .list { flex:1; overflow-y:auto; padding:12px 16px 90px; display:flex; flex-direction:column; gap:9px; }
+  .glance-note { font-size:11.5px; color:var(--ink-soft); margin-bottom:2px; font-weight:600; }
+
+  .grow { display:flex; align-items:center; gap:12px; border:none; border-radius:14px; padding:18px 16px; cursor:pointer; font-family:inherit; text-align:left; width:100%; }
+  .grow-name { flex:1; font-size:17px; font-weight:700; }
+  .grow-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:17px; }
+  .grow-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .grow--red { background:var(--red-bg); color:var(--red); }
+  .grow--red .grow-dot { background:var(--red); }
+  .grow--yellow { background:var(--yellow-bg); color:var(--yellow); }
+  .grow--yellow .grow-dot { background:var(--yellow); }
+  .grow--green { background:var(--green-bg); color:var(--green); }
+  .grow--green .grow-dot { background:var(--green); }
+  .grow--green .grow-amount { font-size:13px; font-family:'Inter'; font-weight:600; }
+
+  .empty { padding:40px 10px; text-align:center; }
+  .empty-title { font-weight:700; margin-bottom:4px; font-size:15px; }
+  .empty-sub { font-size:13px; color:var(--ink-soft); }
+
+  .fab { position:absolute; right:20px; bottom:22px; width:58px; height:58px; border-radius:50%; background:var(--accent); color:#2A1D06; border:none; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 20px -8px rgba(198,134,29,0.6); cursor:pointer; }
+
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:18px 14px; border-bottom:1px solid var(--line); }
+  .topbar-title { font-weight:700; font-size:16px; flex:1; text-align:center; }
+  .iconbtn { width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:var(--surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink); }
+  .iconbtn--danger { color:var(--red); }
+
+  .balance-card { margin:16px 18px; background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:18px; text-align:center; }
+  .balance-label { font-size:12.5px; color:var(--ink-soft); margin-bottom:4px; }
+  .balance-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:30px; color:var(--red); }
+  .balance-amount--clear { color:var(--green); }
+  .wa-btn { margin-top:12px; display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--primary-dark); background:var(--green-bg); border-radius:8px; padding:9px 13px; text-decoration:none; }
+
+  .entries { flex:1; overflow-y:auto; padding:0 14px; }
+  .entry { border-bottom:1px solid var(--line); }
+  .entry-row { display:flex; align-items:center; justify-content:space-between; padding:15px 4px; cursor:pointer; gap:8px; }
+  .entry-item { font-size:15.5px; font-weight:700; }
+  .entry-date { font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .entry-right { text-align:right; }
+  .entry-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:16px; }
+  .entry-amount--paid { color:var(--ink-soft); text-decoration:line-through; }
+  .tag { margin-top:4px; font-size:11px; display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-weight:700; }
+  .tag--paid { background:var(--green-bg); color:var(--green); }
+  .tag--partial { background:var(--yellow-bg); color:var(--yellow); }
+  .tag--unpaid { background:var(--red-bg); color:var(--red); }
+  .entry-icons { display:flex; gap:4px; flex-shrink:0; }
+  .entry-icon-btn { width:26px; height:26px; border-radius:7px; border:1px solid var(--line); background:var(--surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-soft); }
+  .entry-icon-btn--danger { color:var(--red); }
+
+  .settle-form, .quickadd { padding:10px 4px 16px; display:flex; flex-direction:column; gap:10px; }
+  .delete-confirm-text { font-size:12.5px; color:var(--ink-soft); line-height:1.4; }
+  .quick-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { border:1px solid var(--line); background:var(--surface); border-radius:10px; padding:10px 13px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; color:var(--ink); }
+  .chip--active { background:var(--primary); border-color:var(--primary); color:#fff; }
+  .chip--ghost { color:var(--ink-soft); }
+  .chip--mic { display:flex; align-items:center; gap:5px; color:var(--accent); border-color:var(--accent); }
+  .chip--listening { background:var(--accent); color:#fff; }
+  .custom-row { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:10px; padding:4px 4px 4px 12px; background:var(--surface); }
+  .custom-prefix { font-weight:700; color:var(--ink-soft); font-size:14px; }
+  .custom-input { flex:1; border:none; outline:none; background:transparent; font-size:15px; font-family:inherit; padding:8px 0; color:var(--ink); }
+  .custom-go { background:var(--primary); color:#fff; border:none; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .custom-go:disabled { opacity:0.4; cursor:not-allowed; }
+  .settle-actions { display:flex; gap:8px; }
+  .settle-btn, .ghost-btn, .settle-full { border-radius:10px; border:none; font-size:14px; font-weight:700; padding:12px 14px; cursor:pointer; font-family:inherit; }
+  .settle-btn, .settle-full { background:var(--primary); color:#fff; }
+  .settle-btn { flex:1; }
+  .settle-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .settle-btn--danger { background:var(--red); }
+  .ghost-btn { background:transparent; border:1px solid var(--line); color:var(--ink-soft); display:flex; align-items:center; gap:4px; }
+
+  .quickadd-label { font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.03em; }
+  .amount-display { font-family:'Source Serif 4',serif; font-weight:700; font-size:30px; color:var(--primary); }
+  .plain-input { border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; font-family:inherit; width:100%; }
+
+  .form { padding:16px 18px; display:flex; flex-direction:column; gap:16px; flex:1; }
+  .form label { font-size:13px; font-weight:700; color:var(--ink-soft); display:flex; flex-direction:column; gap:6px; }
+  .form .optional { font-weight:400; opacity:0.8; }
+  .form input { border:1px solid var(--line); border-radius:10px; padding:12px; font-size:16px; font-family:inherit; color:var(--ink); }
+
+  .primary-btn { margin:8px 18px 20px; background:var(--primary); color:#fff; border:none; border-radius:12px; padding:15px; font-size:15.5px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; font-family:inherit; }
+  .primary-btn:disabled { opacity:0.45; cursor:not-allowed; }
+
+  .toast { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); background:var(--ink); color:#F6F1E4; padding:10px 18px; border-radius:20px; font-size:13px; font-weight:600; box-shadow:0 10px 24px -10px rgba(0,0,0,0.5); z-index:10; }
+  .sync-dot { position:absolute; top:14px; right:16px; width:9px; height:9px; border-radius:50%; z-index:5; }
+  .sync-dot--synced { background:#7fd99a; }
+  .sync-dot--pending { background:#e8c76a; }
+  .sync-dot--offline { background:#c9c1a4; }
+  svg { display:block; }
+
+  .center-screen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 24px; }
+  .splash-brand { font-family:'Source Serif 4',serif; font-weight:700; font-size:34px; color:var(--primary); }
+  .splash-tag { font-size:14px; color:var(--ink-soft); margin-top:6px; }
+  .splash-lede { font-size:13.5px; color:var(--ink-soft); margin-top:18px; line-height:1.5; max-width:280px; }
+  .stage-form { width:100%; margin-top:26px; text-align:left; display:flex; flex-direction:column; gap:14px; }
+  .stage-form label { font-size:13px; font-weight:700; color:var(--ink-soft); display:flex; flex-direction:column; gap:6px; }
+  .stage-form .optional { font-weight:400; opacity:0.8; }
+  .stage-form input, .stage-form select { border:1px solid var(--line); border-radius:10px; padding:12px; font-size:15px; font-family:inherit; color:var(--ink); background:var(--surface); }
+  .stage-hint { font-size:12px; color:var(--ink-soft); margin-top:-6px; }
+  .stage-error { font-size:12.5px; color:var(--red); }
+  .pin-dots { display:flex; gap:14px; justify-content:center; margin:10px 0 4px; }
+  .pin-dot { width:16px; height:16px; border-radius:50%; border:1.5px solid var(--line); }
+  .pin-dot--filled { background:var(--primary); border-color:var(--primary); }
+</style>
+</head>
+<body>
+  <div id="phone"></div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    /* ================= SUPABASE (background sync only — never blocks the UI) ================= */
+    const SUPABASE_URL = "https://hbdxnixgkqsxkoksdacf.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_2A10f28AhjULRYBIqSSk2A_QRoF2vu4";
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      db: { schema: "mytab" },
+      auth: { persistSession: false },
+    });
+
+    /* ---------- this device's business identity ---------- */
+    const BUSINESS_ID_KEY = "mytab_business_id_v1";
+    const BUSINESS_META_KEY = "mytab_business_meta_v1"; // { name, identifier, type, pin }
+    const ONBOARDED_KEY = "mytab_onboarded_v1";
+
+    function getBusinessId() { return localStorage.getItem(BUSINESS_ID_KEY); }
+    function setBusinessId(id) { localStorage.setItem(BUSINESS_ID_KEY, id); }
+    function getBusinessMeta() {
+      try { return JSON.parse(localStorage.getItem(BUSINESS_META_KEY)) || {}; }
+      catch (e) { return {}; }
+    }
+    function setBusinessMeta(meta) { localStorage.setItem(BUSINESS_META_KEY, JSON.stringify(meta)); }
+    function isOnboarded() { return localStorage.getItem(ONBOARDED_KEY) === "1"; }
+    function markOnboarded() { localStorage.setItem(ONBOARDED_KEY, "1"); }
+
+    let BUSINESS_ID = getBusinessId(); // may be null until onboarding/login completes
+
+    /* ---------- sync queue (source of truth is localStorage; this just mirrors outward) ---------- */
+    const QUEUE_KEY = "mytab_sync_queue_v1";
+    function loadQueue() {
+      try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; }
+      catch (e) { return []; }
+    }
+    function saveQueue(q) {
+      try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch (e) {}
+    }
+    function enqueue(op) {
+      const q = loadQueue();
+      q.push(op);
+      saveQueue(q);
+      updateSyncIndicator();
+      drainQueue();
+    }
+
+    let draining = false;
+    async function drainQueue() {
+      if (draining) return;
+      if (!navigator.onLine) { updateSyncIndicator(); return; }
+      draining = true;
+      let q = loadQueue();
+      while (q.length > 0) {
+        const op = q[0];
+        const ok = await runOp(op);
+        if (!ok) break; // stop on first failure, retry later (offline or transient error)
+        q = q.slice(1);
+        saveQueue(q);
+        updateSyncIndicator();
+      }
+      draining = false;
+      updateSyncIndicator();
+    }
+
+    async function runOp(op) {
+      try {
+        if (op.type === "upsert_business") {
+          const row = { id: BUSINESS_ID, name: op.name || "My business" };
+          if (op.phone !== undefined) row.phone = op.phone;
+          if (op.email !== undefined) row.email = op.email;
+          if (op.businessType !== undefined) row.business_type = op.businessType;
+          if (op.pin !== undefined) row.pin = op.pin;
+          const { error } = await sb.from("businesses").upsert(row);
+          if (error) throw error;
+        } else if (op.type === "upsert_customer") {
+          const { error } = await sb.from("customers").upsert({
+            id: op.id, business_id: BUSINESS_ID, name: op.name, phone: op.phone || "",
+          });
+          if (error) throw error;
+        } else if (op.type === "delete_customer") {
+          const { error } = await sb.from("customers").delete().eq("id", op.id);
+          if (error) throw error;
+        } else if (op.type === "upsert_debt") {
+          const { error } = await sb.from("debts").upsert({
+            id: op.id, business_id: BUSINESS_ID, customer_id: op.customerId,
+            item: op.item, amount: op.amount, date: op.date,
+          });
+          if (error) throw error;
+        } else if (op.type === "delete_debt") {
+          const { error } = await sb.from("debts").delete().eq("id", op.id);
+          if (error) throw error;
+        } else if (op.type === "insert_payment") {
+          const { error } = await sb.from("payments").insert({
+            id: op.paymentId, debt_id: op.debtId, amount: op.amount,
+          });
+          if (error) throw error;
+        }
+        return true;
+      } catch (e) {
+        console.warn("Sync op failed, will retry:", op.type, e.message || e);
+        return false;
+      }
+    }
+
+    window.addEventListener("online", drainQueue);
+    setInterval(drainQueue, 20000); // fallback in case the 'online' event is missed
+    drainQueue(); // attempt on load, in case ops were queued last session while offline
+
+    function updateSyncIndicator() {
+      const dot = document.getElementById("syncDot");
+      if (!dot) return;
+      const pending = loadQueue().length;
+      if (!navigator.onLine) { dot.className = "sync-dot sync-dot--offline"; dot.title = "Offline, will sync when back online"; }
+      else if (pending > 0) { dot.className = "sync-dot sync-dot--pending"; dot.title = pending + " change(s) waiting to sync"; }
+      else { dot.className = "sync-dot sync-dot--synced"; dot.title = "Synced"; }
+    }
+
+    /* ---------- login: find an existing business by phone or email ---------- */
+    function classifyIdentifier(raw) {
+      const value = raw.trim();
+      if (!value) return null;
+      if (value.includes("@")) return { column: "email", value: value.toLowerCase() };
+      return { column: "phone", value };
+    }
+
+    async function findRemoteBusiness(identifier) {
+      const { column, value } = identifier;
+      const { data, error } = await sb.from("businesses").select("*").ilike(column, value).maybeSingle();
+      if (error) { console.warn("Lookup failed:", error.message); return { error }; }
+      return { business: data };
+    }
+
+    // Pulls an existing business's customers + debts (with running balance) down into
+    // localStorage, replacing whatever is on this device. Used when logging in on a
+    // device that doesn't already have this business's data.
+    async function pullBusinessData(businessId) {
+      const [{ data: customers, error: custErr }, { data: debtRows, error: debtErr }] = await Promise.all([
+        sb.from("customers").select("*").eq("business_id", businessId),
+        sb.from("debts_with_balance").select("*").eq("business_id", businessId),
+      ]);
+      if (custErr || debtErr) return { error: custErr || debtErr };
+
+      const pulled = (customers || []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        phone: c.phone || "",
+        entries: (debtRows || [])
+          .filter((d) => d.customer_id === c.id)
+          .map((d) => ({
+            id: d.id,
+            item: d.item,
+            amount: Number(d.amount),
+            date: d.date,
+            paidAmount: Number(d.paid_amount || 0),
+            paid: d.status === "paid",
+          })),
+      }));
+      return { debtors: pulled };
+    }
+
+    /* ---------- storage (offline) ---------- */
+    const STORAGE_KEY = "mytab_debtors_v1";
+    function loadDebtors() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) { /* localStorage unavailable (e.g. this preview) — data stays in-memory only */ }
+      return [];
+    }
+    function saveDebtors() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(debtors)); }
+      catch (e) { /* storage unavailable — data stays in-memory only for this session */ }
+    }
+
+    /* ---------- helpers ---------- */
+    const fmt = (n) => "₦" + Number(n).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+    const todayISO = () => new Date().toISOString().slice(0, 10);
+    const daysAgo = (d) => Math.floor((new Date(todayISO()) - new Date(d)) / 86400000);
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    const businessItemsByType = {
+      "Foodstuff & provisions": ["Rice", "Beans", "Oil", "Garri", "Sugar"],
+      "Fashion & tailoring": ["Fabric", "Sewing", "Alteration", "Ready-made wear"],
+      "Electronics & phones": ["Phone", "Charger", "Repair", "Accessories"],
+      "Salon & beauty": ["Hair styling", "Braiding", "Manicure", "Products"],
+      "Building materials & hardware": ["Cement", "Blocks", "Paint", "Tools"],
+      "Pharmacy & chemist": ["Drugs", "Consultation", "Injection", "Supplements"],
+      "Restaurant / food vendor": ["Food pack", "Drinks", "Delivery", "Extra"],
+      "Transport / logistics": ["Fare", "Delivery", "Errand", "Fuel"],
+    };
+    const businessAmountsByType = {
+      "Foodstuff & provisions": [100, 200, 500, 1000, 2000, 5000, 10000],
+      "Fashion & tailoring": [500, 1000, 2000, 5000, 10000, 20000],
+      "Electronics & phones": [1000, 2000, 5000, 10000, 20000, 50000, 100000],
+      "Salon & beauty": [500, 1000, 2000, 3000, 5000, 10000],
+      "Building materials & hardware": [1000, 5000, 10000, 20000, 50000, 100000],
+      "Pharmacy & chemist": [200, 500, 1000, 2000, 5000, 10000],
+      "Restaurant / food vendor": [200, 500, 1000, 1500, 2000, 5000],
+      "Transport / logistics": [100, 200, 500, 1000, 2000, 5000],
+    };
+    const defaultChipAmounts = [100, 200, 500, 1000, 2000, 5000, 10000];
+    function getChipItems() {
+      const type = getBusinessMeta().type;
+      return businessItemsByType[type] || [];
+    }
+    function getChipAmounts() {
+      const type = getBusinessMeta().type;
+      return businessAmountsByType[type] || defaultChipAmounts;
+    }
+
+    function balanceOf(d) { return d.entries.reduce((s, e) => s + (e.amount - e.paidAmount), 0); }
+    function oldestUnpaidDays(d) {
+      const unpaid = d.entries.filter((e) => !e.paid);
+      if (unpaid.length === 0) return 0;
+      return Math.max(...unpaid.map((e) => daysAgo(e.date)));
+    }
+    function status(d) {
+      const bal = balanceOf(d);
+      if (bal === 0) return "green";
+      return oldestUnpaidDays(d) > 14 ? "red" : "yellow";
+    }
+    function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 40); } catch (e) {} }
+
+    const icon = {
+      plus: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+      plusSm: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+      back: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`,
+      search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`,
+      wa: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>`,
+      check: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`,
+      x: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`,
+      trash: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg>`,
+      trashSm: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg>`,
+      pencil: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
+      mic: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>`,
+    };
+
+    const businessTypes = [
+      "Foodstuff & provisions", "Fashion & tailoring", "Electronics & phones",
+      "Salon & beauty", "Building materials & hardware", "Pharmacy & chemist",
+      "Restaurant / food vendor", "Transport / logistics", "Other",
+    ];
+
+    /* ---------- state ---------- */
+    let debtors = loadDebtors();
+    let tab = "today";
+    let view = "home";
+    let selectedId = null;
+    let query = "";
+    let toastMsg = null, toastTimer = null;
+    let openEntryId = null, openMode = null; // mode: "settle" | "edit" | "delete"
+    let addingEntry = false;
+
+    let newItem = getChipItems()[0] || "Other", newCustomItem = "", newAmount = 0, newCustomAmt = "", listening = false;
+    let editItemVal = "", editAmountVal = 0;
+    let settleCustomAmt = "";
+
+    // Pre-app flow: "splash" -> "login" -> "onboarding" (new business) -> "app"
+    // or straight to "pinlock" -> "app" if this device already has a business set up.
+    let stage = !isOnboarded() ? "splash" : (getBusinessMeta().pin ? "pinlock" : "app");
+    let loginIdentifier = "", loginPin = "", loginError = "", loginBusy = false;
+    let pendingIdentifier = null; // { column, value } — carried from login into onboarding when no match is found
+    let onbName = "", onbType = businessTypes[0], onbPin = "", onbError = "", onbBusy = false;
+    let pinInput = "", pinError = "";
+
+    function flash(msg) {
+      toastMsg = msg; render();
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toastMsg = null; render(); }, 2000);
+    }
+
+    function resetAddForm() { newItem = getChipItems()[0] || "Other"; newCustomItem = ""; newAmount = 0; newCustomAmt = ""; listening = false; }
+
+    /* ---------- actions ---------- */
+    function goHome() { view = "home"; render(); }
+    function openDebtor(id) { selectedId = id; view = "detail"; openEntryId = null; openMode = null; addingEntry = false; render(); }
+    function goAddDebtor() { view = "addDebtor"; render(); }
+
+    function addDebtor(name, phone) {
+      const id = crypto.randomUUID();
+      debtors.push({ id, name, phone, entries: [] });
+      saveDebtors();
+      enqueue({ type: "upsert_customer", id, name, phone });
+      selectedId = id; view = "detail"; render(); buzz(); flash(name + " added");
+    }
+
+    function addEntry(item, amount) {
+      const d = debtors.find((x) => x.id === selectedId);
+      const id = crypto.randomUUID();
+      const date = todayISO();
+      d.entries.push({ id, item, amount, date, paid: false, paidAmount: 0 });
+      saveDebtors();
+      enqueue({ type: "upsert_debt", id, customerId: selectedId, item, amount, date });
+      addingEntry = false; render(); buzz(); flash("Recorded");
+    }
+
+    function editEntry(entryId, item, amount) {
+      const d = debtors.find((x) => x.id === selectedId);
+      const e = d.entries.find((x) => x.id === entryId);
+      e.item = item; e.amount = amount; e.paid = e.paidAmount >= amount;
+      saveDebtors();
+      enqueue({ type: "upsert_debt", id: entryId, customerId: selectedId, item, amount, date: e.date });
+      openEntryId = null; openMode = null; render(); buzz(); flash("Updated");
+    }
+
+    function deleteEntry(entryId) {
+      const d = debtors.find((x) => x.id === selectedId);
+      d.entries = d.entries.filter((x) => x.id !== entryId);
+      saveDebtors();
+      enqueue({ type: "delete_debt", id: entryId });
+      openEntryId = null; openMode = null; render(); buzz(); flash("Deleted");
+    }
+
+    function settleEntry(entryId, amt) {
+      const d = debtors.find((x) => x.id === selectedId);
+      const e = d.entries.find((x) => x.id === entryId);
+      e.paidAmount = Math.min(e.amount, e.paidAmount + amt);
+      e.paid = e.paidAmount >= e.amount;
+      saveDebtors();
+      enqueue({ type: "insert_payment", paymentId: crypto.randomUUID(), debtId: entryId, amount: amt });
+      openEntryId = null; openMode = null; render(); buzz(); flash("Payment recorded");
+    }
+
+    function removeDebtor(id) {
+      debtors = debtors.filter((d) => d.id !== id);
+      saveDebtors();
+      enqueue({ type: "delete_customer", id });
+      goHome(); flash("Removed");
+    }
+
+    function openEntryMode(id, mode) { openEntryId = id; openMode = mode; render(); }
+    function closeEntryMode() { openEntryId = null; openMode = null; render(); }
+
+    /* ---------- render ---------- */
+    function render() {
+      const root = document.getElementById("phone");
+      if (stage === "splash") root.innerHTML = renderSplash();
+      else if (stage === "login") root.innerHTML = renderLogin();
+      else if (stage === "onboarding") root.innerHTML = renderOnboarding();
+      else if (stage === "pinlock") root.innerHTML = renderPinlock();
+      else if (view === "home") root.innerHTML = renderHome();
+      else if (view === "detail") root.innerHTML = renderDetail();
+      else if (view === "addDebtor") root.innerHTML = renderAddDebtor();
+
+      if (stage === "app") root.innerHTML += `<div class="sync-dot" id="syncDot"></div>`;
+      if (toastMsg) root.innerHTML += `<div class="toast">${esc(toastMsg)}</div>`;
+      wireEvents();
+      if (stage === "app") updateSyncIndicator();
+    }
+
+    function renderSplash() {
+      return `<div class="screen">
+        <div class="center-screen">
+          <div class="splash-brand">MyTab</div>
+          <div class="splash-tag">put it on your tab</div>
+          <div class="splash-lede">Know who owes you, get paid, and keep your records, even if your phone gets lost.</div>
+        </div>
+        <button class="primary-btn" id="splashContinueBtn">Get started</button>
+      </div>`;
+    }
+
+    function renderLogin() {
+      return `<div class="screen">
+        <div class="center-screen" style="justify-content:flex-start; padding-top:60px;">
+          <div class="splash-brand" style="font-size:24px;">MyTab</div>
+          <div class="splash-tag">put it on your tab</div>
+          <div class="stage-form">
+            <label>Phone number or email
+              <input id="loginIdInput" type="text" placeholder="080… or you@example.com" value="${esc(loginIdentifier)}" autofocus />
+            </label>
+            <div class="stage-hint">Already have a MyTab? Enter the same phone or email you used before to bring your data to this device.</div>
+            ${loginError ? `<div class="stage-error">${esc(loginError)}</div>` : ""}
+          </div>
+        </div>
+        <button class="primary-btn" id="loginContinueBtn" ${loginBusy ? "disabled" : ""}>${loginBusy ? "Checking…" : "Continue"}</button>
+      </div>`;
+    }
+
+    function renderOnboarding() {
+      return `<div class="screen">
+        <div class="topbar">
+          <div style="width:36px"></div>
+          <div class="topbar-title">Set up your business</div>
+          <div style="width:36px"></div>
+        </div>
+        <div class="stage-form" style="padding:16px 18px;">
+          <label>Business name <input id="onbNameInput" placeholder="e.g. Mama Chioma Stores" value="${esc(onbName)}" /></label>
+          <label>What do you sell or do?
+            <select id="onbTypeInput">
+              ${businessTypes.map((t) => `<option value="${esc(t)}" ${onbType === t ? "selected" : ""}>${esc(t)}</option>`).join("")}
+            </select>
+          </label>
+          <label>4-digit code <span class="optional">(optional, locks the app on this device)</span>
+            <input id="onbPinInput" type="tel" inputmode="numeric" maxlength="4" placeholder="e.g. 1234" value="${esc(onbPin)}" />
+          </label>
+          ${onbError ? `<div class="stage-error">${esc(onbError)}</div>` : ""}
+        </div>
+        <button class="primary-btn" id="onbSaveBtn" ${onbBusy ? "disabled" : ""}>${onbBusy ? "Setting up…" : "Save and continue"}</button>
+      </div>`;
+    }
+
+    function renderPinlock() {
+      const meta = getBusinessMeta();
+      return `<div class="screen">
+        <div class="center-screen">
+          <div class="splash-brand" style="font-size:24px;">MyTab</div>
+          <div class="splash-tag">${meta.name ? esc(meta.name) : "Enter your code"}</div>
+          <div class="stage-form" style="align-items:center;">
+            <input id="pinInput" type="tel" inputmode="numeric" maxlength="4" placeholder="••••" value="${esc(pinInput)}" style="text-align:center; font-size:22px; letter-spacing:8px; width:140px;" autofocus />
+            ${pinError ? `<div class="stage-error">${esc(pinError)}</div>` : ""}
+          </div>
+        </div>
+        <button class="primary-btn" id="pinContinueBtn">Unlock</button>
+      </div>`;
+    }
+
+    function renderHome() {
+      const totalOwed = debtors.reduce((s, d) => s + balanceOf(d), 0);
+      const today = [...debtors].filter((d) => balanceOf(d) > 0).sort((a, b) => balanceOf(b) - balanceOf(a));
+      const q = query.trim().toLowerCase();
+      const all = [...(q ? debtors.filter((d) => d.name.toLowerCase().includes(q)) : debtors)].sort((a, b) => balanceOf(b) - balanceOf(a));
+
+      let listHtml = "";
+      if (tab === "today") {
+        listHtml += `<div class="glance-note">Who to collect from, tap a name to open</div>`;
+        if (today.length === 0) listHtml += `<div class="empty"><div class="empty-title">Nobody owes you right now</div></div>`;
+        listHtml += today.map((d) => glanceRow(d, false)).join("");
+      } else {
+        if (all.length === 0) listHtml += `<div class="empty"><div class="empty-title">Nobody on the book yet</div><div class="empty-sub">Tap + to add someone.</div></div>`;
+        listHtml += all.map((d) => glanceRow(d, true)).join("");
+      }
+
+      return `
+        <div class="screen">
+          <div class="hero">
+            <div class="brand-name">MyTab</div>
+            <div class="hero-label">Total owed to you</div>
+            <div class="hero-amount">${fmt(totalOwed)}</div>
+          </div>
+          <div class="tabs">
+            <button class="tab${tab === "today" ? " tab--active" : ""}" data-tab="today">Today</button>
+            <button class="tab${tab === "all" ? " tab--active" : ""}" data-tab="all">All</button>
+          </div>
+          ${tab === "all" ? `<div class="searchbar">${icon.search}<input id="searchInput" placeholder="Search a name…" value="${esc(query)}" /></div>` : ""}
+          <div class="list">${listHtml}</div>
+          <button class="fab" id="addDebtorBtn">${icon.plus}</button>
+        </div>`;
+    }
+
+    function glanceRow(d, showSettled) {
+      const bal = balanceOf(d);
+      if (bal === 0 && !showSettled) return "";
+      const cls = bal === 0 ? "green" : status(d);
+      return `<button class="grow grow--${cls}" data-open="${d.id}">
+        <span class="grow-dot"></span>
+        <span class="grow-name">${esc(d.name)}</span>
+        <span class="grow-amount">${bal === 0 ? "Settled" : fmt(bal)}</span>
+      </button>`;
+    }
+
+    function renderDetail() {
+      const d = debtors.find((x) => x.id === selectedId);
+      const bal = balanceOf(d);
+      const waLink = d.phone
+        ? `https://wa.me/234${d.phone.replace(/^0/, "")}?text=${encodeURIComponent(`Hi ${d.name}, reminder, you currently owe ${fmt(bal)}. Thank you!`)}`
+        : null;
+
+      const entries = [...d.entries].sort((a, b) => (a.date < b.date ? 1 : -1)).map((e) => entryHtml(e)).join("");
+
+      return `
+        <div class="screen">
+          <div class="topbar">
+            <button class="iconbtn" id="backBtn">${icon.back}</button>
+            <div class="topbar-title">${esc(d.name)}</div>
+            <button class="iconbtn iconbtn--danger" id="removeDebtorBtn">${icon.trash}</button>
+          </div>
+          <div class="balance-card">
+            <div class="balance-label">Balance owed</div>
+            <div class="balance-amount${bal === 0 ? " balance-amount--clear" : ""}">${fmt(bal)}</div>
+            ${waLink ? `<a class="wa-btn" href="${waLink}" target="_blank" rel="noreferrer">${icon.wa} Send reminder</a>` : ""}
+          </div>
+          <div class="entries">${entries}</div>
+          ${!addingEntry
+            ? `<button class="primary-btn" id="addEntryBtn">${icon.plusSm} Add new debt</button>`
+            : quickAddHtml()}
+        </div>`;
+    }
+
+    function entryHtml(e) {
+      const remaining = e.amount - e.paidAmount;
+      const isOpen = openEntryId === e.id;
+      const tag = e.paid ? `<div class="tag tag--paid">${icon.check} Paid</div>`
+        : e.paidAmount > 0 ? `<div class="tag tag--partial">${fmt(remaining)} left</div>`
+        : `<div class="tag tag--unpaid">Unpaid</div>`;
+
+      let panel = "";
+      if (isOpen && openMode === "settle" && !e.paid) {
+        panel = `<div class="settle-form">
+          <div class="quick-row">${getChipAmounts().filter((a) => a <= remaining).slice(0, 4).map((a) => `<button class="chip" data-settle="${e.id}" data-amt="${a}">${fmt(a)}</button>`).join("")}</div>
+          <div class="custom-row">
+            <span class="custom-prefix">₦</span>
+            <input type="number" id="settleCustom-${e.id}" class="custom-input" placeholder="Enter amount (up to ${fmt(remaining)})" value="${settleCustomAmt}" />
+            <button class="custom-go" data-settle-custom="${e.id}" data-remaining="${remaining}">Record</button>
+          </div>
+          <div class="settle-actions">
+            <button class="ghost-btn" data-close-entry="1">${icon.x} Cancel</button>
+            <button class="settle-full" data-settle="${e.id}" data-amt="${remaining}">Mark fully paid</button>
+          </div>
+        </div>`;
+      } else if (isOpen && openMode === "edit") {
+        panel = `<div class="settle-form">
+          <input class="plain-input" id="editItem-${e.id}" value="${esc(editItemVal)}" placeholder="Item" />
+          <div class="custom-row">
+            <span class="custom-prefix">₦</span>
+            <input type="number" id="editAmount-${e.id}" class="custom-input" value="${editAmountVal}" />
+          </div>
+          <div class="settle-actions">
+            <button class="ghost-btn" data-close-entry="1">${icon.x} Cancel</button>
+            <button class="settle-btn" data-save-edit="${e.id}">Save changes</button>
+          </div>
+        </div>`;
+      } else if (isOpen && openMode === "delete") {
+        panel = `<div class="settle-form">
+          <div class="delete-confirm-text">Delete "${esc(e.item)}" (${fmt(e.amount)})? This can't be undone.</div>
+          <div class="settle-actions">
+            <button class="ghost-btn" data-close-entry="1">${icon.x} Cancel</button>
+            <button class="settle-btn settle-btn--danger" data-delete-entry="${e.id}">Delete</button>
+          </div>
+        </div>`;
+      }
+
+      return `<div class="entry">
+        <div class="entry-row" data-toggle-settle="${!e.paid ? e.id : ""}">
+          <div class="entry-main">
+            <div class="entry-item">${esc(e.item)}</div>
+            <div class="entry-date">${e.date}</div>
+          </div>
+          <div class="entry-right">
+            <div class="entry-amount${e.paid ? " entry-amount--paid" : ""}">${fmt(e.amount)}</div>
+            ${tag}
+          </div>
+          <div class="entry-icons">
+            <button class="entry-icon-btn" data-edit-entry="${e.id}">${icon.pencil}</button>
+            <button class="entry-icon-btn entry-icon-btn--danger" data-delete-mode="${e.id}">${icon.trashSm}</button>
+          </div>
+        </div>
+        ${panel}
+      </div>`;
+    }
+
+    function quickAddHtml() {
+      const finalItem = newItem === "Other" ? newCustomItem : newItem;
+      const valid = finalItem.trim() && newAmount > 0;
+      return `<div class="quickadd">
+        <div class="quickadd-label">Item</div>
+        <div class="quick-row">
+          ${getChipItems().map((it) => `<button class="chip${newItem === it ? " chip--active" : ""}" data-item="${it}">${it}</button>`).join("")}
+          <button class="chip${newItem === "Other" ? " chip--active" : ""}" data-item="Other">Other</button>
+        </div>
+        ${newItem === "Other" ? `<input class="plain-input" id="customItemInput" placeholder="What was it?" value="${esc(newCustomItem)}" />` : ""}
+
+        <div class="quickadd-label">Amount</div>
+        <div class="amount-display">${newAmount > 0 ? fmt(newAmount) : "₦0"}</div>
+        <div class="quick-row">
+          ${getChipAmounts().map((a) => `<button class="chip" data-add-amt="${a}">+${fmt(a)}</button>`).join("")}
+          <button class="chip chip--ghost" id="resetAmtBtn">Reset</button>
+          <button class="chip chip--mic${listening ? " chip--listening" : ""}" id="micBtn">${icon.mic} ${listening ? "Listening…" : "Voice"}</button>
+        </div>
+        <div class="custom-row">
+          <span class="custom-prefix">₦</span>
+          <input type="number" id="customAmtInput" class="custom-input" placeholder="Or type the exact amount" value="${newAmount > 0 ? newAmount : ""}" />
+        </div>
+
+        <div class="settle-actions" style="margin-top:2px">
+          <button class="ghost-btn" id="cancelAddBtn">${icon.x} Cancel</button>
+          <button class="settle-btn" id="saveEntryBtn" ${valid ? "" : "disabled"}>Save debt</button>
+        </div>
+      </div>`;
+    }
+
+    function renderAddDebtor() {
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="cancelDebtorBtn">${icon.back}</button>
+          <div class="topbar-title">Add person</div>
+          <div style="width:36px"></div>
+        </div>
+        <div class="form">
+          <label>Name <input id="nameInput" placeholder="e.g. Chioma" /></label>
+          <label>Phone <span class="optional">(optional)</span> <input id="phoneInput" placeholder="080…" /></label>
+        </div>
+        <button class="primary-btn" id="saveDebtorBtn" disabled>Save</button>
+      </div>`;
+    }
+
+    /* ---------- events ---------- */
+    async function handleLoginContinue() {
+      loginError = "";
+      const identifier = classifyIdentifier(loginIdentifier);
+      if (!identifier) { loginError = "Enter a phone number or email."; render(); return; }
+
+      loginBusy = true; render();
+
+      if (!navigator.onLine) {
+        // Offline with no local business yet — nothing to pull down, so start fresh.
+        loginBusy = false;
+        pendingIdentifier = identifier;
+        stage = "onboarding";
+        render();
+        return;
+      }
+
+      const { business, error } = await findRemoteBusiness(identifier);
+      loginBusy = false;
+
+      if (error) { loginError = "Couldn't reach the server, try again, or continue and set up fresh."; render(); return; }
+
+      if (!business) {
+        pendingIdentifier = identifier;
+        stage = "onboarding";
+        render();
+        return;
+      }
+
+      // Found an existing business for this phone/email — pull its data down to this device.
+      const { debtors: pulled, error: pullErr } = await pullBusinessData(business.id);
+      if (pullErr) { loginError = "Found your business but couldn't load your data, try again."; render(); return; }
+
+      BUSINESS_ID = business.id;
+      setBusinessId(BUSINESS_ID);
+      setBusinessMeta({ name: business.name, identifier: identifier.value, type: business.business_type || "", pin: business.pin || "" });
+      markOnboarded();
+      debtors = pulled;
+      saveDebtors();
+      stage = business.pin ? "pinlock" : "app";
+      pinInput = "";
+      render();
+    }
+
+    async function handleOnboardingSave() {
+      onbError = "";
+      if (!onbName.trim()) { onbError = "Enter a business name."; render(); return; }
+      if (onbPin && !/^\d{4}$/.test(onbPin)) { onbError = "The code should be exactly 4 digits, or left blank."; render(); return; }
+
+      onbBusy = true; render();
+
+      BUSINESS_ID = crypto.randomUUID();
+      setBusinessId(BUSINESS_ID);
+      const identifier = pendingIdentifier || { column: "phone", value: "" };
+      setBusinessMeta({ name: onbName.trim(), identifier: identifier.value, type: onbType, pin: onbPin });
+      markOnboarded();
+
+      enqueue({
+        type: "upsert_business",
+        name: onbName.trim(),
+        phone: identifier.column === "phone" ? identifier.value : "",
+        email: identifier.column === "email" ? identifier.value : "",
+        businessType: onbType,
+        pin: onbPin || null,
+      });
+
+      onbBusy = false;
+      stage = "app";
+      render();
+    }
+
+    function handlePinContinue() {
+      const meta = getBusinessMeta();
+      if (pinInput === meta.pin) {
+        pinError = "";
+        stage = "app";
+        render();
+      } else {
+        pinError = "That code doesn't match, try again.";
+        pinInput = "";
+        render();
+      }
+    }
+
+    function wireEvents() {
+      const root = document.getElementById("phone");
+
+      const splashContinueBtn = document.getElementById("splashContinueBtn");
+      if (splashContinueBtn) splashContinueBtn.addEventListener("click", () => { stage = "login"; render(); });
+
+      const loginIdInput = document.getElementById("loginIdInput");
+      if (loginIdInput) loginIdInput.addEventListener("input", (e) => { loginIdentifier = e.target.value; });
+      const loginContinueBtn = document.getElementById("loginContinueBtn");
+      if (loginContinueBtn) loginContinueBtn.addEventListener("click", handleLoginContinue);
+
+      const onbNameInput = document.getElementById("onbNameInput");
+      if (onbNameInput) onbNameInput.addEventListener("input", (e) => { onbName = e.target.value; });
+      const onbTypeInput = document.getElementById("onbTypeInput");
+      if (onbTypeInput) onbTypeInput.addEventListener("change", (e) => { onbType = e.target.value; });
+      const onbPinInput = document.getElementById("onbPinInput");
+      if (onbPinInput) onbPinInput.addEventListener("input", (e) => { onbPin = e.target.value.replace(/\D/g, "").slice(0, 4); });
+      const onbSaveBtn = document.getElementById("onbSaveBtn");
+      if (onbSaveBtn) onbSaveBtn.addEventListener("click", handleOnboardingSave);
+
+      const pinInputEl = document.getElementById("pinInput");
+      if (pinInputEl) pinInputEl.addEventListener("input", (e) => { pinInput = e.target.value.replace(/\D/g, "").slice(0, 4); });
+      const pinContinueBtn = document.getElementById("pinContinueBtn");
+      if (pinContinueBtn) pinContinueBtn.addEventListener("click", handlePinContinue);
+
+      root.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("click", () => { tab = el.dataset.tab; render(); }));
+      const searchInput = document.getElementById("searchInput");
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          query = e.target.value;
+          const caret = e.target.selectionStart;
+          render();
+          const again = document.getElementById("searchInput");
+          if (again) { again.focus(); again.setSelectionRange(caret, caret); }
+        });
+      }
+      root.querySelectorAll("[data-open]").forEach((el) => el.addEventListener("click", () => openDebtor(el.dataset.open)));
+      const addDebtorBtn = document.getElementById("addDebtorBtn");
+      if (addDebtorBtn) addDebtorBtn.addEventListener("click", goAddDebtor);
+
+      const backBtn = document.getElementById("backBtn");
+      if (backBtn) backBtn.addEventListener("click", goHome);
+      const removeDebtorBtn = document.getElementById("removeDebtorBtn");
+      if (removeDebtorBtn) removeDebtorBtn.addEventListener("click", () => removeDebtor(selectedId));
+
+      const addEntryBtn = document.getElementById("addEntryBtn");
+      if (addEntryBtn) addEntryBtn.addEventListener("click", () => { addingEntry = true; resetAddForm(); render(); });
+      const cancelAddBtn = document.getElementById("cancelAddBtn");
+      if (cancelAddBtn) cancelAddBtn.addEventListener("click", () => { addingEntry = false; render(); });
+
+      root.querySelectorAll("[data-toggle-settle]").forEach((el) => {
+        const id = el.dataset.toggleSettle;
+        if (!id) return;
+        el.addEventListener("click", (ev) => {
+          if (ev.target.closest(".settle-form") || ev.target.closest(".entry-icons")) return;
+          if (openEntryId === id && openMode === "settle") closeEntryMode();
+          else { settleCustomAmt = ""; openEntryMode(id, "settle"); }
+        });
+      });
+      root.querySelectorAll(".settle-form").forEach((f) => f.addEventListener("click", (e) => e.stopPropagation()));
+      root.querySelectorAll("[data-close-entry]").forEach((el) => el.addEventListener("click", closeEntryMode));
+
+      root.querySelectorAll("[data-settle]").forEach((el) => el.addEventListener("click", () => settleEntry(el.dataset.settle, Number(el.dataset.amt))));
+      root.querySelectorAll("[data-settle-custom]").forEach((el) => el.addEventListener("click", () => {
+        const id = el.dataset.settleCustom, remaining = Number(el.dataset.remaining);
+        const input = document.getElementById("settleCustom-" + id);
+        const val = Number(input.value);
+        if (val > 0 && val <= remaining) settleEntry(id, val);
+      }));
+
+      root.querySelectorAll("[data-edit-entry]").forEach((el) => el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const id = el.dataset.editEntry;
+        const d = debtors.find((x) => x.id === selectedId);
+        const entry = d.entries.find((x) => x.id === id);
+        editItemVal = entry.item; editAmountVal = entry.amount;
+        openEntryMode(id, "edit");
+      }));
+      root.querySelectorAll("[data-save-edit]").forEach((el) => el.addEventListener("click", () => {
+        const id = el.dataset.saveEdit;
+        const itemInput = document.getElementById("editItem-" + id);
+        const amtInput = document.getElementById("editAmount-" + id);
+        if (itemInput.value.trim() && Number(amtInput.value) > 0) editEntry(id, itemInput.value.trim(), Number(amtInput.value));
+      }));
+
+      root.querySelectorAll("[data-delete-mode]").forEach((el) => el.addEventListener("click", (ev) => { ev.stopPropagation(); openEntryMode(el.dataset.deleteMode, "delete"); }));
+      root.querySelectorAll("[data-delete-entry]").forEach((el) => el.addEventListener("click", () => deleteEntry(el.dataset.deleteEntry)));
+
+      root.querySelectorAll("[data-item]").forEach((el) => el.addEventListener("click", () => { newItem = el.dataset.item; render(); }));
+      const customItemInput = document.getElementById("customItemInput");
+      if (customItemInput) { customItemInput.focus(); customItemInput.addEventListener("input", (e) => { newCustomItem = e.target.value; }); }
+
+      root.querySelectorAll("[data-add-amt]").forEach((el) => el.addEventListener("click", () => { newAmount += Number(el.dataset.addAmt); render(); }));
+      const resetAmtBtn = document.getElementById("resetAmtBtn");
+      if (resetAmtBtn) resetAmtBtn.addEventListener("click", () => { newAmount = 0; render(); });
+      const customAmtInput = document.getElementById("customAmtInput");
+      if (customAmtInput) customAmtInput.addEventListener("input", (e) => { newAmount = Number(e.target.value) || 0; document.getElementById("saveEntryBtn").disabled = !((newItem === "Other" ? newCustomItem : newItem).trim() && newAmount > 0); });
+
+      const micBtn = document.getElementById("micBtn");
+      if (micBtn) micBtn.addEventListener("click", tryVoice);
+
+      const saveEntryBtn = document.getElementById("saveEntryBtn");
+      if (saveEntryBtn) saveEntryBtn.addEventListener("click", () => {
+        const finalItem = (newItem === "Other" ? newCustomItem : newItem).trim();
+        if (finalItem && newAmount > 0) addEntry(finalItem, newAmount);
+      });
+
+      const cancelDebtorBtn = document.getElementById("cancelDebtorBtn");
+      if (cancelDebtorBtn) cancelDebtorBtn.addEventListener("click", goHome);
+      const nameInput = document.getElementById("nameInput");
+      const saveDebtorBtn = document.getElementById("saveDebtorBtn");
+      if (nameInput && saveDebtorBtn) {
+        nameInput.focus();
+        nameInput.addEventListener("input", () => { saveDebtorBtn.disabled = !nameInput.value.trim(); });
+        saveDebtorBtn.addEventListener("click", () => {
+          const phoneInput = document.getElementById("phoneInput");
+          if (nameInput.value.trim()) addDebtor(nameInput.value.trim(), phoneInput.value.trim());
+        });
+      }
+    }
+
+    function tryVoice() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { alert("Voice isn't available on this device, just tap an amount instead."); return; }
+      const rec = new SR();
+      rec.lang = "en-NG";
+      rec.onstart = () => { listening = true; render(); };
+      rec.onerror = () => { listening = false; render(); };
+      rec.onend = () => { listening = false; render(); };
+      rec.onresult = (ev) => {
+        const said = ev.results[0][0].transcript;
+        const digits = said.replace(/[^0-9]/g, "");
+        if (digits) newAmount = Number(digits);
+        render();
+      };
+      rec.start();
+    }
+
+    render();
+  </script>
+</body>
+</html>
