@@ -136,20 +136,16 @@
 <body>
   <div id="phone"></div>
 
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    /* ================= SUPABASE (background sync only, never blocks the UI) ================= */
-    const SUPABASE_URL = "https://hbdxnixgkqsxkoksdacf.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_2A10f28AhjULRYBIqSSk2A_QRoF2vu4";
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      db: { schema: "mytab" },
-      auth: { persistSession: false },
-    });
+    /* ================= BACKEND API ================= */
+    const API_BASE = "https://mytab-backend-ch5s.onrender.com";
 
     /* ---------- this device's business identity ---------- */
     const BUSINESS_ID_KEY = "mytab_business_id_v1";
     const BUSINESS_META_KEY = "mytab_business_meta_v1"; // { name, identifier, type, pin }
     const ONBOARDED_KEY = "mytab_onboarded_v1";
+    const TOKEN_KEY = "mytab_token_v1";
+    const ID_MAP_KEY = "mytab_id_map_v1";
 
     function getBusinessId() { return localStorage.getItem(BUSINESS_ID_KEY); }
     function setBusinessId(id) { localStorage.setItem(BUSINESS_ID_KEY, id); }
@@ -160,10 +156,72 @@
     function setBusinessMeta(meta) { localStorage.setItem(BUSINESS_META_KEY, JSON.stringify(meta)); }
     function isOnboarded() { return localStorage.getItem(ONBOARDED_KEY) === "1"; }
     function markOnboarded() { localStorage.setItem(ONBOARDED_KEY, "1"); }
+    function getToken() { return localStorage.getItem(TOKEN_KEY); }
+    function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+    function clearSession() {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(BUSINESS_ID_KEY);
+      localStorage.removeItem(BUSINESS_META_KEY);
+      localStorage.removeItem(ONBOARDED_KEY);
+    }
 
     let BUSINESS_ID = getBusinessId(); // may be null until onboarding/login completes
 
-    /* ---------- sync queue (source of truth is localStorage; this just mirrors outward) ---------- */
+    /* ---------- local id -> server id map (for ops created while offline) ---------- */
+    function loadIdMap() {
+      try { return JSON.parse(localStorage.getItem(ID_MAP_KEY)) || {}; }
+      catch (e) { return {}; }
+    }
+    function saveIdMap(m) { try { localStorage.setItem(ID_MAP_KEY, JSON.stringify(m)); } catch (e) {} }
+    function resolveId(id) { const m = loadIdMap(); return m[id] || id; }
+    function remapId(tempId, realId, kind) {
+      if (!tempId || tempId === realId) return;
+      const m = loadIdMap();
+      m[tempId] = realId;
+      saveIdMap(m);
+
+      if (kind === "customer") {
+        const d = debtors.find((x) => x.id === tempId);
+        if (d) d.id = realId;
+        if (selectedId === tempId) selectedId = realId;
+      } else if (kind === "debt") {
+        debtors.forEach((d) => {
+          const e = d.entries.find((x) => x.id === tempId);
+          if (e) e.id = realId;
+        });
+        if (openEntryId === tempId) openEntryId = realId;
+      }
+      saveDebtors();
+
+      let q = loadQueue();
+      q = q.map((o) => {
+        const clone = Object.assign({}, o);
+        if (clone.customerId === tempId) clone.customerId = realId;
+        if (clone.id === tempId) clone.id = realId;
+        if (clone.debtId === tempId) clone.debtId = realId;
+        return clone;
+      });
+      saveQueue(q);
+    }
+
+    /* ---------- generic authenticated fetch helper ---------- */
+    async function apiFetch(path, options) {
+      options = options || {};
+      const token = getToken();
+      const headers = Object.assign({ "Content-Type": "application/json" }, options.headers || {});
+      if (token) headers.Authorization = "Bearer " + token;
+      try {
+        const res = await fetch(API_BASE + path, Object.assign({}, options, { headers }));
+        let body = null;
+        try { body = await res.json(); } catch (e) { /* empty body, e.g. 204 */ }
+        if (!res.ok) return { ok: false, status: res.status, error: (body && body.error) || "Request failed." };
+        return { ok: true, status: res.status, data: body };
+      } catch (e) {
+        return { ok: false, status: 0, error: "Couldn't reach the server." };
+      }
+    }
+
+    /* ---------- sync queue (source of truth is localStorage; this pushes outward to the API) ---------- */
     const QUEUE_KEY = "mytab_sync_queue_v1";
     function loadQueue() {
       try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; }
@@ -183,14 +241,14 @@
     let draining = false;
     async function drainQueue() {
       if (draining) return;
-      if (!navigator.onLine) { updateSyncIndicator(); return; }
+      if (!navigator.onLine || !getToken()) { updateSyncIndicator(); return; }
       draining = true;
       let q = loadQueue();
       while (q.length > 0) {
         const op = q[0];
         const ok = await runOp(op);
         if (!ok) break; // stop on first failure, retry later (offline or transient error)
-        q = q.slice(1);
+        q = loadQueue().slice(1); // reload, since runOp may have rewritten the queue via remapId
         saveQueue(q);
         updateSyncIndicator();
       }
@@ -200,36 +258,63 @@
 
     async function runOp(op) {
       try {
-        if (op.type === "upsert_business") {
-          const row = { id: BUSINESS_ID, name: op.name || "My business" };
-          if (op.phone !== undefined) row.phone = op.phone;
-          if (op.email !== undefined) row.email = op.email;
-          if (op.businessType !== undefined) row.business_type = op.businessType;
-          if (op.pin !== undefined) row.pin = op.pin;
-          const { error } = await sb.from("businesses").upsert(row);
-          if (error) throw error;
-        } else if (op.type === "upsert_customer") {
-          const { error } = await sb.from("customers").upsert({
-            id: op.id, business_id: BUSINESS_ID, name: op.name, phone: op.phone || "",
+        if (op.type === "create_customer") {
+          const res = await apiFetch("/api/customers", {
+            method: "POST",
+            body: JSON.stringify({ name: op.name, phone: op.phone || undefined }),
           });
-          if (error) throw error;
-        } else if (op.type === "delete_customer") {
-          const { error } = await sb.from("customers").delete().eq("id", op.id);
-          if (error) throw error;
-        } else if (op.type === "upsert_debt") {
-          const { error } = await sb.from("debts").upsert({
-            id: op.id, business_id: BUSINESS_ID, customer_id: op.customerId,
-            item: op.item, amount: op.amount, date: op.date,
+          if (!res.ok) throw new Error(res.error);
+          remapId(op.tempId, res.data.customer.id, "customer");
+          return true;
+        }
+        if (op.type === "update_customer") {
+          const id = resolveId(op.id);
+          const res = await apiFetch(`/api/customers/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ name: op.name, phone: op.phone }),
           });
-          if (error) throw error;
-        } else if (op.type === "delete_debt") {
-          const { error } = await sb.from("debts").delete().eq("id", op.id);
-          if (error) throw error;
-        } else if (op.type === "insert_payment") {
-          const { error } = await sb.from("payments").insert({
-            id: op.paymentId, debt_id: op.debtId, amount: op.amount,
+          if (!res.ok) throw new Error(res.error);
+          return true;
+        }
+        if (op.type === "delete_customer") {
+          const id = resolveId(op.id);
+          const res = await apiFetch(`/api/customers/${id}`, { method: "DELETE" });
+          if (!res.ok && res.status !== 404) throw new Error(res.error);
+          return true;
+        }
+        if (op.type === "create_debt") {
+          const customerId = resolveId(op.customerId);
+          const res = await apiFetch(`/api/customers/${customerId}/debts`, {
+            method: "POST",
+            body: JSON.stringify({ item: op.item, amount: op.amount, date: op.date }),
           });
-          if (error) throw error;
+          if (!res.ok) throw new Error(res.error);
+          remapId(op.tempId, res.data.debt.id, "debt");
+          return true;
+        }
+        if (op.type === "update_debt") {
+          const id = resolveId(op.id);
+          const res = await apiFetch(`/api/debts/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ item: op.item, amount: op.amount }),
+          });
+          if (!res.ok) throw new Error(res.error);
+          return true;
+        }
+        if (op.type === "delete_debt") {
+          const id = resolveId(op.id);
+          const res = await apiFetch(`/api/debts/${id}`, { method: "DELETE" });
+          if (!res.ok && res.status !== 404) throw new Error(res.error);
+          return true;
+        }
+        if (op.type === "add_payment") {
+          const id = resolveId(op.debtId);
+          const res = await apiFetch(`/api/debts/${id}/payments`, {
+            method: "POST",
+            body: JSON.stringify({ amount: op.amount }),
+          });
+          if (!res.ok) throw new Error(res.error);
+          return true;
         }
         return true;
       } catch (e) {
@@ -238,7 +323,7 @@
       }
     }
 
-    window.addEventListener("online", drainQueue);
+    window.addEventListener("online", () => { drainQueue(); refreshFromServerIfIdle(); });
     setInterval(drainQueue, 20000); // fallback in case the 'online' event is missed
     drainQueue(); // attempt on load, in case ops were queued last session while offline
 
@@ -251,7 +336,7 @@
       else { dot.className = "sync-dot sync-dot--synced"; dot.title = "Synced"; }
     }
 
-    /* ---------- login: find an existing business by phone or email ---------- */
+    /* ---------- login / register against the backend ---------- */
     function classifyIdentifier(raw) {
       const value = raw.trim();
       if (!value) return null;
@@ -259,39 +344,60 @@
       return { column: "phone", value };
     }
 
-    async function findRemoteBusiness(identifier) {
-      const { column, value } = identifier;
-      const { data, error } = await sb.from("businesses").select("*").ilike(column, value).maybeSingle();
-      if (error) { console.warn("Lookup failed:", error.message); return { error }; }
-      return { business: data };
+    async function loginToBackend(identifierValue, pin) {
+      const body = { identifier: identifierValue };
+      if (pin) body.pin = pin;
+      return apiFetch("/auth/login", { method: "POST", body: JSON.stringify(body) });
     }
 
-    // Pulls an existing business's customers + debts (with running balance) down into
-    // localStorage, replacing whatever is on this device. Used when logging in on a
-    // device that doesn't already have this business's data.
-    async function pullBusinessData(businessId) {
-      const [{ data: customers, error: custErr }, { data: debtRows, error: debtErr }] = await Promise.all([
-        sb.from("customers").select("*").eq("business_id", businessId),
-        sb.from("debts_with_balance").select("*").eq("business_id", businessId),
-      ]);
-      if (custErr || debtErr) return { error: custErr || debtErr };
+    async function registerToBackend({ name, businessType, phone, email, pin }) {
+      return apiFetch("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ name, businessType, phone, email, pin: pin || undefined }),
+      });
+    }
 
-      const pulled = (customers || []).map((c) => ({
+    // Pulls this business's customers + debts (with running balance) down from the API.
+    async function fetchCustomers() {
+      const res = await apiFetch("/api/customers", { method: "GET" });
+      if (!res.ok) {
+        if (res.status === 401) handleAuthExpired();
+        return { error: res.error };
+      }
+      const pulled = (res.data.customers || []).map((c) => ({
         id: c.id,
         name: c.name,
         phone: c.phone || "",
-        entries: (debtRows || [])
-          .filter((d) => d.customer_id === c.id)
-          .map((d) => ({
-            id: d.id,
-            item: d.item,
-            amount: Number(d.amount),
-            date: d.date,
-            paidAmount: Number(d.paid_amount || 0),
-            paid: d.status === "paid",
-          })),
+        entries: (c.entries || []).map((e) => ({
+          id: e.id,
+          item: e.item,
+          amount: Number(e.amount),
+          date: e.date,
+          paidAmount: Number(e.paidAmount || 0),
+          paid: !!e.paid,
+        })),
       }));
       return { debtors: pulled };
+    }
+
+    // Quietly pulls fresh data from the server, but only when there's nothing local
+    // still waiting to sync (so we never clobber unsynced local changes).
+    async function refreshFromServerIfIdle() {
+      if (!getToken() || !navigator.onLine) return;
+      if (loadQueue().length > 0) return;
+      const { debtors: pulled, error } = await fetchCustomers();
+      if (error) return;
+      debtors = pulled;
+      saveDebtors();
+      if (stage === "app") render();
+    }
+
+    function handleAuthExpired() {
+      clearSession();
+      stage = "splash";
+      loginIdentifier = ""; loginPin = ""; needsLoginPin = false;
+      loginError = "Your session expired, log in again.";
+      render();
     }
 
     /* ---------- storage (offline) ---------- */
@@ -407,7 +513,7 @@
     // Pre-app flow: "splash" -> "login" -> "onboarding" (new business) -> "app"
     // or straight to "pinlock" -> "app" if this device already has a business set up.
     let stage = !isOnboarded() ? "splash" : (getBusinessMeta().pin ? "pinlock" : "app");
-    let loginIdentifier = "", loginPin = "", loginError = "", loginBusy = false;
+    let loginIdentifier = "", loginPin = "", loginError = "", loginBusy = false, needsLoginPin = false;
     let pendingIdentifier = null; // { column, value }, carried from login into onboarding when no match is found
     let onbName = "", onbType = businessTypes[0], onbPin = "", onbError = "", onbBusy = false;
     let pinInput = "", pinError = "";
@@ -429,7 +535,7 @@
       const id = crypto.randomUUID();
       debtors.push({ id, name, phone, entries: [] });
       saveDebtors();
-      enqueue({ type: "upsert_customer", id, name, phone });
+      enqueue({ type: "create_customer", tempId: id, name, phone });
       selectedId = id; view = "detail"; render(); buzz(); flash(name + " added");
     }
 
@@ -439,7 +545,7 @@
       const date = todayISO();
       d.entries.push({ id, item, amount, date, paid: false, paidAmount: 0 });
       saveDebtors();
-      enqueue({ type: "upsert_debt", id, customerId: selectedId, item, amount, date });
+      enqueue({ type: "create_debt", tempId: id, customerId: selectedId, item, amount, date });
       addingEntry = false; render(); buzz(); flash("Recorded");
     }
 
@@ -448,7 +554,7 @@
       const e = d.entries.find((x) => x.id === entryId);
       e.item = item; e.amount = amount; e.paid = e.paidAmount >= amount;
       saveDebtors();
-      enqueue({ type: "upsert_debt", id: entryId, customerId: selectedId, item, amount, date: e.date });
+      enqueue({ type: "update_debt", id: entryId, item, amount });
       openEntryId = null; openMode = null; render(); buzz(); flash("Updated");
     }
 
@@ -466,7 +572,7 @@
       e.paidAmount = Math.min(e.amount, e.paidAmount + amt);
       e.paid = e.paidAmount >= e.amount;
       saveDebtors();
-      enqueue({ type: "insert_payment", paymentId: crypto.randomUUID(), debtId: entryId, amount: amt });
+      enqueue({ type: "add_payment", debtId: entryId, amount: amt });
       openEntryId = null; openMode = null; render(); buzz(); flash("Payment recorded");
     }
 
@@ -515,9 +621,14 @@
           <div class="splash-tag">put it on your tab</div>
           <div class="stage-form">
             <label>Phone number or email
-              <input id="loginIdInput" type="text" placeholder="080… or you@example.com" value="${esc(loginIdentifier)}" autofocus />
+              <input id="loginIdInput" type="text" placeholder="080… or you@example.com" value="${esc(loginIdentifier)}" ${needsLoginPin ? "disabled" : "autofocus"} />
             </label>
-            <div class="stage-hint">Already have a MyTab? Enter the same phone or email you used before to bring your data to this device.</div>
+            ${needsLoginPin
+              ? `<label>4-digit code
+                  <input id="loginPinInput" type="tel" inputmode="numeric" maxlength="4" placeholder="••••" value="${esc(loginPin)}" autofocus />
+                </label>
+                <div class="stage-hint" id="loginUseDifferent" style="cursor:pointer; text-decoration:underline;">Not you? Use a different number</div>`
+              : `<div class="stage-hint">Already have a MyTab? Enter the same phone or email you used before to bring your data to this device.</div>`}
             ${loginError ? `<div class="stage-error">${esc(loginError)}</div>` : ""}
           </div>
         </div>
@@ -748,40 +859,48 @@
       const identifier = classifyIdentifier(loginIdentifier);
       if (!identifier) { loginError = "Enter a phone number or email."; render(); return; }
 
+      if (!navigator.onLine) {
+        loginError = "You need an internet connection the first time you set up MyTab on a device. Connect and try again.";
+        render();
+        return;
+      }
+
       loginBusy = true; render();
 
-      if (!navigator.onLine) {
-        // Offline with no local business yet, nothing to pull down, so start fresh.
-        loginBusy = false;
-        pendingIdentifier = identifier;
-        stage = "onboarding";
-        render();
-        return;
-      }
-
-      const { business, error } = await findRemoteBusiness(identifier);
+      const res = await loginToBackend(identifier.value, needsLoginPin ? loginPin : undefined);
       loginBusy = false;
 
-      if (error) { loginError = "Couldn't reach the server, try again, or continue and set up fresh."; render(); return; }
-
-      if (!business) {
-        pendingIdentifier = identifier;
-        stage = "onboarding";
+      if (!res.ok) {
+        if (res.status === 401) {
+          needsLoginPin = true;
+          loginError = loginPin ? "Incorrect PIN." : "This business is PIN-protected. Enter the PIN.";
+          render();
+          return;
+        }
+        if (res.status === 404) {
+          pendingIdentifier = identifier;
+          stage = "onboarding";
+          render();
+          return;
+        }
+        loginError = res.error || "Couldn't reach the server, try again.";
         render();
         return;
       }
 
-      // Found an existing business for this phone/email, pull its data down to this device.
-      const { debtors: pulled, error: pullErr } = await pullBusinessData(business.id);
-      if (pullErr) { loginError = "Found your business but couldn't load your data, try again."; render(); return; }
-
+      const { token, business } = res.data;
+      setToken(token);
       BUSINESS_ID = business.id;
       setBusinessId(BUSINESS_ID);
-      setBusinessMeta({ name: business.name, identifier: identifier.value, type: business.business_type || "", pin: business.pin || "" });
+      setBusinessMeta({ name: business.name, identifier: identifier.value, type: business.business_type || "", pin: needsLoginPin ? loginPin : "" });
       markOnboarded();
-      debtors = pulled;
+
+      const { debtors: pulled, error: pullErr } = await fetchCustomers();
+      debtors = pulled || [];
       saveDebtors();
-      stage = business.pin ? "pinlock" : "app";
+      if (pullErr) flash("Logged in, but couldn't load your data yet.");
+
+      stage = business.has_pin ? "pinlock" : "app";
       pinInput = "";
       render();
     }
@@ -791,24 +910,40 @@
       if (!onbName.trim()) { onbError = "Enter a business name."; render(); return; }
       if (onbPin && !/^\d{4}$/.test(onbPin)) { onbError = "The code should be exactly 4 digits, or left blank."; render(); return; }
 
+      if (!navigator.onLine) {
+        onbError = "You need an internet connection to set up your business the first time. Connect and try again.";
+        render();
+        return;
+      }
+
       onbBusy = true; render();
 
-      BUSINESS_ID = crypto.randomUUID();
-      setBusinessId(BUSINESS_ID);
       const identifier = pendingIdentifier || { column: "phone", value: "" };
-      setBusinessMeta({ name: onbName.trim(), identifier: identifier.value, type: onbType, pin: onbPin });
-      markOnboarded();
-
-      enqueue({
-        type: "upsert_business",
+      const res = await registerToBackend({
         name: onbName.trim(),
-        phone: identifier.column === "phone" ? identifier.value : "",
-        email: identifier.column === "email" ? identifier.value : "",
         businessType: onbType,
-        pin: onbPin || null,
+        phone: identifier.column === "phone" ? identifier.value : undefined,
+        email: identifier.column === "email" ? identifier.value : undefined,
+        pin: onbPin || undefined,
       });
 
       onbBusy = false;
+
+      if (!res.ok) {
+        onbError = res.error || "Couldn't set up your business, try again.";
+        render();
+        return;
+      }
+
+      const { token, business } = res.data;
+      setToken(token);
+      BUSINESS_ID = business.id;
+      setBusinessId(BUSINESS_ID);
+      setBusinessMeta({ name: business.name, identifier: identifier.value, type: onbType, pin: onbPin || "" });
+      markOnboarded();
+      debtors = [];
+      saveDebtors();
+
       stage = "app";
       render();
     }
@@ -819,6 +954,7 @@
         pinError = "";
         stage = "app";
         render();
+        refreshFromServerIfIdle();
       } else {
         pinError = "That code doesn't match, try again.";
         pinInput = "";
@@ -834,6 +970,10 @@
 
       const loginIdInput = document.getElementById("loginIdInput");
       if (loginIdInput) loginIdInput.addEventListener("input", (e) => { loginIdentifier = e.target.value; });
+      const loginPinInput = document.getElementById("loginPinInput");
+      if (loginPinInput) loginPinInput.addEventListener("input", (e) => { loginPin = e.target.value.replace(/\D/g, "").slice(0, 4); });
+      const loginUseDifferent = document.getElementById("loginUseDifferent");
+      if (loginUseDifferent) loginUseDifferent.addEventListener("click", () => { needsLoginPin = false; loginPin = ""; loginIdentifier = ""; loginError = ""; render(); });
       const loginContinueBtn = document.getElementById("loginContinueBtn");
       if (loginContinueBtn) loginContinueBtn.addEventListener("click", handleLoginContinue);
 
@@ -965,6 +1105,7 @@
     }
 
     render();
+    refreshFromServerIfIdle();
   </script>
 </body>
 </html>
