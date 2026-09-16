@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MyTab · Put it on your tab</title>
 <meta name="description" content="Track who owes you, offline-friendly, built for a busy market." />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="theme-color" content="#2F6B4F" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="MyTab" />
+<meta name="mobile-web-app-capable" content="yes" />
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap');
   :root {
@@ -139,6 +148,16 @@
   <script>
     /* ================= BACKEND API ================= */
     const API_BASE = "https://mytab-backend-ch5s.onrender.com";
+
+    /* ---------- Add to Home Screen ---------- */
+    let deferredInstallPrompt = null;
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+    });
+    function isStandalone() {
+      return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    }
 
     /* ---------- this device's business identity ---------- */
     const BUSINESS_ID_KEY = "mytab_business_id_v1";
@@ -489,6 +508,7 @@
       trashSm: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg>`,
       pencil: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
       mic: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>`,
+      install: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>`,
     };
 
     const businessTypes = [
@@ -616,6 +636,7 @@
       else if (view === "detail") root.innerHTML = renderDetail();
       else if (view === "addDebtor") root.innerHTML = renderAddDebtor();
       else if (view === "greetings") root.innerHTML = renderGreetings();
+      else if (view === "install") root.innerHTML = renderInstall();
 
       if (stage === "app") root.innerHTML += `<div class="sync-dot" id="syncDot"></div>`;
       if (toastMsg) root.innerHTML += `<div class="toast">${esc(toastMsg)}</div>`;
@@ -735,6 +756,7 @@
             <div class="hero-label">Total owed to you</div>
             <div class="hero-amount">${fmt(totalOwed)}</div>
             <button class="iconbtn" id="greetingsBtn" style="position:absolute; top:20px; right:18px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.wa}</button>
+            ${!isStandalone() ? `<button class="iconbtn" id="installBtn" style="position:absolute; top:20px; right:64px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.install}</button>` : ""}
           </div>
           ${birthdayBanner}
           <div class="tabs">
@@ -927,6 +949,48 @@
       </div>`;
     }
 
+    function renderInstall() {
+      const ua = navigator.userAgent || "";
+      const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const isAndroid = /android/i.test(ua);
+      let steps;
+      if (isIOS) {
+        steps = [
+          "Tap the Share icon (square with an arrow pointing up) at the bottom of Safari.",
+          "Scroll down the share menu and tap \"Add to Home Screen\".",
+          "Tap \"Add\" in the top right corner.",
+        ];
+      } else if (isAndroid) {
+        steps = [
+          "Tap the ⋮ menu (three dots) in the top right of Chrome.",
+          "Tap \"Add to Home screen\" or \"Install app\".",
+          "Confirm by tapping \"Install\" or \"Add\".",
+        ];
+      } else {
+        steps = [
+          "Open this page on your phone's browser (Safari on iPhone, Chrome on Android).",
+          "Use that browser's menu to add MyTab to your home screen.",
+        ];
+      }
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="installBackBtn">${icon.back}</button>
+          <div class="topbar-title">Add to Home Screen</div>
+          <div style="width:36px"></div>
+        </div>
+        <div class="center-screen" style="padding-top:20px;">
+          <div class="splash-brand" style="font-size:22px;">Get MyTab on your home screen</div>
+          <div class="splash-lede" style="max-width:320px;">Add MyTab like a real app, one tap to open, no browser bar, works offline.</div>
+          <div class="stage-form" style="text-align:left; margin-top:22px; gap:18px;">
+            ${steps.map((s, i) => `<div style="display:flex; gap:10px; align-items:flex-start;">
+              <div style="flex-shrink:0; width:24px; height:24px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">${i + 1}</div>
+              <div style="font-size:14px; color:var(--ink); line-height:1.5; padding-top:2px;">${esc(s)}</div>
+            </div>`).join("")}
+          </div>
+        </div>
+      </div>`;
+    }
+
     function renderAddDebtor() {
       return `<div class="screen">
         <div class="topbar">
@@ -1097,6 +1161,20 @@
       if (addDebtorBtn) addDebtorBtn.addEventListener("click", goAddDebtor);
       const greetingsBtn = document.getElementById("greetingsBtn");
       if (greetingsBtn) greetingsBtn.addEventListener("click", goGreetings);
+      const installBtn = document.getElementById("installBtn");
+      if (installBtn) installBtn.addEventListener("click", async () => {
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          const choice = await deferredInstallPrompt.userChoice;
+          deferredInstallPrompt = null;
+          if (choice.outcome === "accepted") flash("Installing…");
+          else render();
+        } else {
+          view = "install"; render();
+        }
+      });
+      const installBackBtn = document.getElementById("installBackBtn");
+      if (installBackBtn) installBackBtn.addEventListener("click", goHome);
 
       const greetingsBackBtn = document.getElementById("greetingsBackBtn");
       if (greetingsBackBtn) greetingsBackBtn.addEventListener("click", goHome);
