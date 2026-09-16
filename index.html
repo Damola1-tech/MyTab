@@ -261,7 +261,7 @@
         if (op.type === "create_customer") {
           const res = await apiFetch("/api/customers", {
             method: "POST",
-            body: JSON.stringify({ name: op.name, phone: op.phone || undefined }),
+            body: JSON.stringify({ name: op.name, phone: op.phone || undefined, birthday: op.birthday || undefined }),
           });
           if (!res.ok) throw new Error(res.error);
           remapId(op.tempId, res.data.customer.id, "customer");
@@ -271,7 +271,7 @@
           const id = resolveId(op.id);
           const res = await apiFetch(`/api/customers/${id}`, {
             method: "PATCH",
-            body: JSON.stringify({ name: op.name, phone: op.phone }),
+            body: JSON.stringify({ name: op.name, phone: op.phone, birthday: op.birthday || undefined }),
           });
           if (!res.ok) throw new Error(res.error);
           return true;
@@ -368,6 +368,7 @@
         id: c.id,
         name: c.name,
         phone: c.phone || "",
+        birthday: c.birthday || "",
         entries: (c.entries || []).map((e) => ({
           id: e.id,
           item: e.item,
@@ -517,6 +518,8 @@
     let pendingIdentifier = null; // { column, value }, carried from login into onboarding when no match is found
     let onbName = "", onbType = businessTypes[0], onbPin = "", onbError = "", onbBusy = false;
     let pinInput = "", pinError = "";
+    let editingCustomer = false, editCustName = "", editCustPhone = "", editCustBirthday = "";
+    let greetingTemplate = "newmonth", greetingCustomText = "";
 
     function flash(msg) {
       toastMsg = msg; render();
@@ -528,15 +531,31 @@
 
     /* ---------- actions ---------- */
     function goHome() { view = "home"; render(); }
-    function openDebtor(id) { selectedId = id; view = "detail"; openEntryId = null; openMode = null; addingEntry = false; render(); }
+    function openDebtor(id) { selectedId = id; view = "detail"; openEntryId = null; openMode = null; addingEntry = false; editingCustomer = false; render(); }
     function goAddDebtor() { view = "addDebtor"; render(); }
+    function goGreetings() { view = "greetings"; render(); }
 
-    function addDebtor(name, phone) {
+    const greetingTemplates = {
+      newmonth: { label: "New month", text: (name) => `Happy new month, ${name}! Thank you for being a valued customer at ${getBusinessMeta().name || "our shop"}. Wishing you a great month ahead. 🎉` },
+      christmas: { label: "Christmas", text: (name) => `Merry Christmas, ${name}! Wishing you and your family a joyful season from all of us at ${getBusinessMeta().name || "the shop"}. 🎄` },
+      newyear: { label: "New year", text: (name) => `Happy new year, ${name}! Thank you for your patronage this past year, here's to an even better one ahead. 🎊` },
+      custom: { label: "Custom", text: () => greetingCustomText },
+    };
+
+    function addDebtor(name, phone, birthday) {
       const id = crypto.randomUUID();
-      debtors.push({ id, name, phone, entries: [] });
+      debtors.push({ id, name, phone, birthday: birthday || "", entries: [] });
       saveDebtors();
-      enqueue({ type: "create_customer", tempId: id, name, phone });
+      enqueue({ type: "create_customer", tempId: id, name, phone, birthday });
       selectedId = id; view = "detail"; render(); buzz(); flash(name + " added");
+    }
+
+    function updateCustomer(id, name, phone, birthday) {
+      const d = debtors.find((x) => x.id === id);
+      d.name = name; d.phone = phone; d.birthday = birthday || "";
+      saveDebtors();
+      enqueue({ type: "update_customer", id, name, phone, birthday });
+      editingCustomer = false; render(); flash("Saved");
     }
 
     function addEntry(item, amount) {
@@ -596,6 +615,7 @@
       else if (view === "home") root.innerHTML = renderHome();
       else if (view === "detail") root.innerHTML = renderDetail();
       else if (view === "addDebtor") root.innerHTML = renderAddDebtor();
+      else if (view === "greetings") root.innerHTML = renderGreetings();
 
       if (stage === "app") root.innerHTML += `<div class="sync-dot" id="syncDot"></div>`;
       if (toastMsg) root.innerHTML += `<div class="toast">${esc(toastMsg)}</div>`;
@@ -674,11 +694,17 @@
       </div>`;
     }
 
+    function todaysBirthdays() {
+      const mmdd = todayISO().slice(5); // "MM-DD"
+      return debtors.filter((d) => d.birthday && d.birthday.slice(5) === mmdd && d.phone);
+    }
+
     function renderHome() {
       const totalOwed = debtors.reduce((s, d) => s + balanceOf(d), 0);
       const today = [...debtors].filter((d) => balanceOf(d) > 0).sort((a, b) => balanceOf(b) - balanceOf(a));
       const q = query.trim().toLowerCase();
       const all = [...(q ? debtors.filter((d) => d.name.toLowerCase().includes(q)) : debtors)].sort((a, b) => balanceOf(b) - balanceOf(a));
+      const birthdaysToday = todaysBirthdays();
 
       let listHtml = "";
       if (tab === "today") {
@@ -690,13 +716,27 @@
         listHtml += all.map((d) => glanceRow(d, true)).join("");
       }
 
+      const birthdayBanner = birthdaysToday.length === 0 ? "" : `
+        <div class="balance-card" style="margin:14px 18px 0; text-align:left;">
+          <div class="balance-label">🎂 Birthday today</div>
+          ${birthdaysToday.map((d) => {
+            const waLink = `https://wa.me/234${d.phone.replace(/^0/, "")}?text=${encodeURIComponent(`Happy birthday, ${d.name}! 🎉 Wishing you a wonderful day from all of us at ${getBusinessMeta().name || "the shop"}.`)}`;
+            return `<div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
+              <span style="font-weight:700; font-size:14px;">${esc(d.name)}</span>
+              <a class="wa-btn" style="margin-top:0;" href="${waLink}" target="_blank" rel="noreferrer">${icon.wa} Send</a>
+            </div>`;
+          }).join("")}
+        </div>`;
+
       return `
         <div class="screen">
-          <div class="hero">
+          <div class="hero" style="position:relative;">
             <div class="brand-name">MyTab</div>
             <div class="hero-label">Total owed to you</div>
             <div class="hero-amount">${fmt(totalOwed)}</div>
+            <button class="iconbtn" id="greetingsBtn" style="position:absolute; top:20px; right:18px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.wa}</button>
           </div>
+          ${birthdayBanner}
           <div class="tabs">
             <button class="tab${tab === "today" ? " tab--active" : ""}" data-tab="today">Today</button>
             <button class="tab${tab === "all" ? " tab--active" : ""}" data-tab="all">All</button>
@@ -732,12 +772,17 @@
           <div class="topbar">
             <button class="iconbtn" id="backBtn">${icon.back}</button>
             <div class="topbar-title">${esc(d.name)}</div>
-            <button class="iconbtn iconbtn--danger" id="removeDebtorBtn">${icon.trash}</button>
+            <div style="display:flex; gap:6px;">
+              <button class="iconbtn" id="editCustomerBtn">${icon.pencil}</button>
+              <button class="iconbtn iconbtn--danger" id="removeDebtorBtn">${icon.trash}</button>
+            </div>
           </div>
+          ${editingCustomer ? editCustomerHtml(d) : ""}
           <div class="balance-card">
             <div class="balance-label">Balance owed</div>
             <div class="balance-amount${bal === 0 ? " balance-amount--clear" : ""}">${fmt(bal)}</div>
             ${waLink ? `<a class="wa-btn" href="${waLink}" target="_blank" rel="noreferrer">${icon.wa} Send reminder</a>` : ""}
+            ${d.birthday ? `<div class="stage-hint" style="margin-top:8px;">🎂 Birthday: ${esc(d.birthday)}</div>` : ""}
           </div>
           <div class="entries">${entries}</div>
           ${!addingEntry
@@ -808,6 +853,18 @@
       </div>`;
     }
 
+    function editCustomerHtml(d) {
+      return `<div class="form" style="padding:10px 18px 4px;">
+        <label>Name <input id="editCustNameInput" value="${esc(editCustName)}" /></label>
+        <label>Phone <span class="optional">(optional)</span> <input id="editCustPhoneInput" value="${esc(editCustPhone)}" placeholder="080…" /></label>
+        <label>Birthday <span class="optional">(optional)</span> <input id="editCustBirthdayInput" type="date" value="${esc(editCustBirthday)}" /></label>
+        <div class="settle-actions">
+          <button class="ghost-btn" id="cancelEditCustBtn">${icon.x} Cancel</button>
+          <button class="settle-btn" id="saveEditCustBtn">Save</button>
+        </div>
+      </div>`;
+    }
+
     function quickAddHtml() {
       const finalItem = newItem === "Other" ? newCustomItem : newItem;
       const valid = finalItem.trim() && newAmount > 0;
@@ -838,6 +895,38 @@
       </div>`;
     }
 
+    function renderGreetings() {
+      const withPhone = debtors.filter((d) => d.phone);
+      const tpl = greetingTemplates[greetingTemplate];
+      const previewOk = greetingTemplate !== "custom" || greetingCustomText.trim();
+
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="greetingsBackBtn">${icon.back}</button>
+          <div class="topbar-title">Send a greeting</div>
+          <div style="width:36px"></div>
+        </div>
+        <div class="form" style="padding-bottom:8px; flex:0;">
+          <div class="quickadd-label">Message</div>
+          <div class="quick-row">
+            ${Object.entries(greetingTemplates).map(([key, t]) => `<button class="chip${greetingTemplate === key ? " chip--active" : ""}" data-greeting-template="${key}">${t.label}</button>`).join("")}
+          </div>
+          ${greetingTemplate === "custom" ? `<textarea id="greetingCustomInput" class="plain-input" rows="3" placeholder="Type your message… (each customer's name isn't auto-inserted, write it generally)">${esc(greetingCustomText)}</textarea>` : `<div class="stage-hint">Preview: "${esc(tpl.text("[Name]"))}"</div>`}
+        </div>
+        <div class="entries" style="flex:1;">
+          ${withPhone.length === 0 ? `<div class="empty"><div class="empty-title">No customers with a phone number yet</div><div class="empty-sub">Add a phone number to a customer to send them greetings.</div></div>` : ""}
+          ${withPhone.map((d) => {
+            const msg = greetingTemplates[greetingTemplate].text(d.name);
+            const waLink = `https://wa.me/234${d.phone.replace(/^0/, "")}?text=${encodeURIComponent(msg)}`;
+            return `<div class="entry-row">
+              <div class="entry-main"><div class="entry-item">${esc(d.name)}</div></div>
+              <a class="wa-btn" style="margin-top:0; ${previewOk ? "" : "opacity:0.4; pointer-events:none;"}" href="${waLink}" target="_blank" rel="noreferrer">${icon.wa} Send</a>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>`;
+    }
+
     function renderAddDebtor() {
       return `<div class="screen">
         <div class="topbar">
@@ -848,6 +937,7 @@
         <div class="form">
           <label>Name <input id="nameInput" placeholder="e.g. Chioma" /></label>
           <label>Phone <span class="optional">(optional)</span> <input id="phoneInput" placeholder="080…" /></label>
+          <label>Birthday <span class="optional">(optional, for birthday greetings)</span> <input id="birthdayInput" type="date" /></label>
         </div>
         <button class="primary-btn" id="saveDebtorBtn" disabled>Save</button>
       </div>`;
@@ -1005,11 +1095,35 @@
       root.querySelectorAll("[data-open]").forEach((el) => el.addEventListener("click", () => openDebtor(el.dataset.open)));
       const addDebtorBtn = document.getElementById("addDebtorBtn");
       if (addDebtorBtn) addDebtorBtn.addEventListener("click", goAddDebtor);
+      const greetingsBtn = document.getElementById("greetingsBtn");
+      if (greetingsBtn) greetingsBtn.addEventListener("click", goGreetings);
+
+      const greetingsBackBtn = document.getElementById("greetingsBackBtn");
+      if (greetingsBackBtn) greetingsBackBtn.addEventListener("click", goHome);
+      root.querySelectorAll("[data-greeting-template]").forEach((el) => el.addEventListener("click", () => { greetingTemplate = el.dataset.greetingTemplate; render(); }));
+      const greetingCustomInput = document.getElementById("greetingCustomInput");
+      if (greetingCustomInput) greetingCustomInput.addEventListener("input", (e) => { greetingCustomText = e.target.value; });
 
       const backBtn = document.getElementById("backBtn");
       if (backBtn) backBtn.addEventListener("click", goHome);
       const removeDebtorBtn = document.getElementById("removeDebtorBtn");
       if (removeDebtorBtn) removeDebtorBtn.addEventListener("click", () => removeDebtor(selectedId));
+
+      const editCustomerBtn = document.getElementById("editCustomerBtn");
+      if (editCustomerBtn) editCustomerBtn.addEventListener("click", () => {
+        const d = debtors.find((x) => x.id === selectedId);
+        editCustName = d.name; editCustPhone = d.phone || ""; editCustBirthday = d.birthday || "";
+        editingCustomer = true; render();
+      });
+      const cancelEditCustBtn = document.getElementById("cancelEditCustBtn");
+      if (cancelEditCustBtn) cancelEditCustBtn.addEventListener("click", () => { editingCustomer = false; render(); });
+      const saveEditCustBtn = document.getElementById("saveEditCustBtn");
+      if (saveEditCustBtn) saveEditCustBtn.addEventListener("click", () => {
+        const nameV = document.getElementById("editCustNameInput").value.trim();
+        const phoneV = document.getElementById("editCustPhoneInput").value.trim();
+        const bdayV = document.getElementById("editCustBirthdayInput").value;
+        if (nameV) updateCustomer(selectedId, nameV, phoneV, bdayV);
+      });
 
       const addEntryBtn = document.getElementById("addEntryBtn");
       if (addEntryBtn) addEntryBtn.addEventListener("click", () => { addingEntry = true; resetAddForm(); render(); });
@@ -1082,7 +1196,8 @@
         nameInput.addEventListener("input", () => { saveDebtorBtn.disabled = !nameInput.value.trim(); });
         saveDebtorBtn.addEventListener("click", () => {
           const phoneInput = document.getElementById("phoneInput");
-          if (nameInput.value.trim()) addDebtor(nameInput.value.trim(), phoneInput.value.trim());
+          const birthdayInput = document.getElementById("birthdayInput");
+          if (nameInput.value.trim()) addDebtor(nameInput.value.trim(), phoneInput.value.trim(), birthdayInput.value);
         });
       }
     }
