@@ -1180,7 +1180,15 @@
       if (greetingsBackBtn) greetingsBackBtn.addEventListener("click", goHome);
       root.querySelectorAll("[data-greeting-template]").forEach((el) => el.addEventListener("click", () => { greetingTemplate = el.dataset.greetingTemplate; render(); }));
       const greetingCustomInput = document.getElementById("greetingCustomInput");
-      if (greetingCustomInput) greetingCustomInput.addEventListener("input", (e) => { greetingCustomText = e.target.value; });
+      if (greetingCustomInput) {
+        greetingCustomInput.addEventListener("input", (e) => {
+          greetingCustomText = e.target.value;
+          const caret = e.target.selectionStart;
+          render();
+          const again = document.getElementById("greetingCustomInput");
+          if (again) { again.focus(); again.setSelectionRange(caret, caret); }
+        });
+      }
 
       const backBtn = document.getElementById("backBtn");
       if (backBtn) backBtn.addEventListener("click", goHome);
