@@ -149,6 +149,17 @@
     /* ================= BACKEND API ================= */
     const API_BASE = "https://mytab-backend-ch5s.onrender.com";
 
+    let billingStatus = null; // { plan, subscriptionStatus, customerCount, customerLimit }
+    async function fetchBillingStatus() {
+      const res = await apiFetch("/billing/status", { method: "GET" });
+      if (res.ok) {
+        billingStatus = res.data;
+        if (stage === "app") render();
+      }
+      return res;
+    }
+    function isPro() { return billingStatus && billingStatus.plan === "pro"; }
+
     /* ---------- Add to Home Screen ---------- */
     let deferredInstallPrompt = null;
     window.addEventListener("beforeinstallprompt", (e) => {
@@ -182,6 +193,9 @@
       localStorage.removeItem(BUSINESS_ID_KEY);
       localStorage.removeItem(BUSINESS_META_KEY);
       localStorage.removeItem(ONBOARDED_KEY);
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(QUEUE_KEY);
+      localStorage.removeItem(ID_MAP_KEY);
     }
 
     let BUSINESS_ID = getBusinessId(); // may be null until onboarding/login completes
@@ -282,7 +296,18 @@
             method: "POST",
             body: JSON.stringify({ name: op.name, phone: op.phone || undefined, birthday: op.birthday || undefined }),
           });
-          if (!res.ok) throw new Error(res.error);
+          if (!res.ok) {
+            if (res.status === 402) {
+              // Free-plan limit hit server-side (e.g. synced elsewhere first) — this
+              // customer can never be created without upgrading, so drop it rather
+              // than retrying forever, and remove the phantom local entry.
+              debtors = debtors.filter((d) => d.id !== op.tempId);
+              saveDebtors();
+              flash("Free plan limit reached, upgrade to add more customers.");
+              return true;
+            }
+            throw new Error(res.error);
+          }
           remapId(op.tempId, res.data.customer.id, "customer");
           return true;
         }
@@ -509,6 +534,7 @@
       pencil: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
       mic: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>`,
       install: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>`,
+      settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
     };
 
     const businessTypes = [
@@ -540,6 +566,9 @@
     let pinInput = "", pinError = "";
     let editingCustomer = false, editCustName = "", editCustPhone = "", editCustBirthday = "";
     let greetingTemplate = "newmonth", greetingCustomText = "";
+    let upgradeInterval = "monthly", upgradeEmail = "", upgradeError = "", upgradeBusy = false;
+    let settingsPinInput = "", settingsPinError = "", settingsPinBusy = false, manageLinkBusy = false;
+    let reportsData = null, reportsRange = "month", reportsBusy = false, exportBusy = false;
 
     function flash(msg) {
       toastMsg = msg; render();
@@ -552,8 +581,48 @@
     /* ---------- actions ---------- */
     function goHome() { view = "home"; render(); }
     function openDebtor(id) { selectedId = id; view = "detail"; openEntryId = null; openMode = null; addingEntry = false; editingCustomer = false; render(); }
-    function goAddDebtor() { view = "addDebtor"; render(); }
-    function goGreetings() { view = "greetings"; render(); }
+    function goAddDebtor() {
+      if (!isPro() && billingStatus && billingStatus.customerLimit != null && debtors.length >= billingStatus.customerLimit) {
+        view = "upgrade"; render(); return;
+      }
+      view = "addDebtor"; render();
+    }
+    function goGreetings() {
+      if (!isPro()) { view = "upgrade"; render(); return; }
+      view = "greetings"; render();
+    }
+    function goUpgrade() { view = "upgrade"; render(); }
+    function goSettings() { settingsPinInput = ""; settingsPinError = ""; view = "settings"; render(); }
+    function goReports() {
+      if (!isPro()) { view = "upgrade"; render(); return; }
+      view = "reports"; render();
+      fetchReports();
+    }
+    async function fetchReports() {
+      reportsBusy = true; render();
+      const res = await apiFetch(`/api/reports/summary?range=${reportsRange}`, { method: "GET" });
+      reportsBusy = false;
+      if (res.ok) reportsData = res.data;
+      else flash(res.error || "Couldn't load reports.");
+      render();
+    }
+    async function handleExportCsv() {
+      exportBusy = true; render();
+      try {
+        const token = getToken();
+        const res = await fetch(API_BASE + "/api/reports/export.csv", { headers: { Authorization: "Bearer " + token } });
+        if (!res.ok) throw new Error("export failed");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "mytab-export.csv";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        flash("Couldn't export, try again.");
+      }
+      exportBusy = false; render();
+    }
 
     const greetingTemplates = {
       newmonth: { label: "New month", text: (name) => `Happy new month, ${name}! Thank you for being a valued customer at ${getBusinessMeta().name || "our shop"}. Wishing you a great month ahead. 🎉` },
@@ -637,6 +706,9 @@
       else if (view === "addDebtor") root.innerHTML = renderAddDebtor();
       else if (view === "greetings") root.innerHTML = renderGreetings();
       else if (view === "install") root.innerHTML = renderInstall();
+      else if (view === "upgrade") root.innerHTML = renderUpgrade();
+      else if (view === "settings") root.innerHTML = renderSettings();
+      else if (view === "reports") root.innerHTML = renderReports();
 
       if (stage === "app") root.innerHTML += `<div class="sync-dot" id="syncDot"></div>`;
       if (toastMsg) root.innerHTML += `<div class="toast">${esc(toastMsg)}</div>`;
@@ -720,6 +792,10 @@
       return debtors.filter((d) => d.birthday && d.birthday.slice(5) === mmdd && d.phone);
     }
 
+    function overdueDebtors() {
+      return debtors.filter((d) => balanceOf(d) > 0 && oldestUnpaidDays(d) > 14);
+    }
+
     function renderHome() {
       const totalOwed = debtors.reduce((s, d) => s + balanceOf(d), 0);
       const today = [...debtors].filter((d) => balanceOf(d) > 0).sort((a, b) => balanceOf(b) - balanceOf(a));
@@ -749,6 +825,21 @@
           }).join("")}
         </div>`;
 
+      const nearLimit = billingStatus && !isPro() && billingStatus.customerLimit != null
+        && billingStatus.customerCount >= billingStatus.customerLimit - 2;
+      const upgradeBanner = !nearLimit ? "" : `
+        <button id="homeUpgradeBanner" style="display:block; width:calc(100% - 36px); margin:14px 18px 0; text-align:left; border:1px solid var(--accent); background:var(--yellow-bg); border-radius:12px; padding:12px 14px; font-family:inherit; cursor:pointer;">
+          <div style="font-weight:700; font-size:13.5px; color:var(--yellow);">${billingStatus.customerCount}/${billingStatus.customerLimit} free customers used</div>
+          <div style="font-size:12.5px; color:var(--ink-soft); margin-top:2px;">Tap to upgrade to Pro for unlimited customers</div>
+        </button>`;
+
+      const overdue = overdueDebtors();
+      const overdueBanner = overdue.length === 0 ? "" : `
+        <button id="homeOverdueBanner" style="display:block; width:calc(100% - 36px); margin:14px 18px 0; text-align:left; border:1px solid var(--red); background:var(--red-bg); border-radius:12px; padding:12px 14px; font-family:inherit; cursor:pointer;">
+          <div style="font-weight:700; font-size:13.5px; color:var(--red);">${overdue.length} customer${overdue.length === 1 ? "" : "s"} overdue 14+ days</div>
+          <div style="font-size:12.5px; color:var(--ink-soft); margin-top:2px;">Tap to see who, and send a reminder</div>
+        </button>`;
+
       return `
         <div class="screen">
           <div class="hero" style="position:relative;">
@@ -757,8 +848,11 @@
             <div class="hero-amount">${fmt(totalOwed)}</div>
             <button class="iconbtn" id="greetingsBtn" style="position:absolute; top:20px; right:18px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.wa}</button>
             ${!isStandalone() ? `<button class="iconbtn" id="installBtn" style="position:absolute; top:20px; right:64px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.install}</button>` : ""}
+            <button class="iconbtn" id="settingsBtn" style="position:absolute; top:20px; right:${isStandalone() ? "64" : "110"}px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.settings}</button>
           </div>
           ${birthdayBanner}
+          ${overdueBanner}
+          ${upgradeBanner}
           <div class="tabs">
             <button class="tab${tab === "today" ? " tab--active" : ""}" data-tab="today">Today</button>
             <button class="tab${tab === "all" ? " tab--active" : ""}" data-tab="all">All</button>
@@ -991,6 +1085,140 @@
       </div>`;
     }
 
+    function renderUpgrade() {
+      const usedLine = billingStatus && billingStatus.customerLimit != null
+        ? `You're using ${billingStatus.customerCount} of ${billingStatus.customerLimit} free customers.`
+        : "";
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="upgradeBackBtn">${icon.back}</button>
+          <div class="topbar-title">MyTab Pro</div>
+          <div style="width:36px"></div>
+        </div>
+        <div style="padding:22px 18px 0; flex:1; overflow-y:auto;">
+          <div class="splash-brand" style="font-size:22px;">Upgrade to Pro</div>
+          ${usedLine ? `<div class="stage-hint" style="margin-top:6px;">${esc(usedLine)}</div>` : ""}
+          <div class="stage-form" style="margin-top:18px; gap:10px;">
+            <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Unlimited customers, no cap</span></div>
+            <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Birthday & seasonal greetings</span></div>
+            <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Everything new we add to Pro later</span></div>
+          </div>
+
+          <div class="quick-row" style="margin-top:20px;">
+            <button class="chip${upgradeInterval === "monthly" ? " chip--active" : ""}" data-interval="monthly">₦1,000 / month</button>
+            <button class="chip${upgradeInterval === "annual" ? " chip--active" : ""}" data-interval="annual">₦10,000 / year</button>
+          </div>
+
+          <div class="stage-form" style="margin-top:16px;">
+            <label>Email <span class="optional">(for your payment receipt)</span>
+              <input id="upgradeEmailInput" type="email" placeholder="you@example.com" value="${esc(upgradeEmail)}" />
+            </label>
+            ${upgradeError ? `<div class="stage-error">${esc(upgradeError)}</div>` : ""}
+          </div>
+        </div>
+        <button class="primary-btn" id="upgradeSubscribeBtn" ${upgradeBusy ? "disabled" : ""}>${upgradeBusy ? "Starting checkout…" : "Continue to payment"}</button>
+        <button class="ghost-btn" id="upgradeRefreshBtn" style="margin:0 18px 18px;">Already paid? Refresh status</button>
+      </div>`;
+    }
+
+    function renderSettings() {
+      const meta = getBusinessMeta();
+      const planLabel = isPro() ? "Pro" : "Free";
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="settingsBackBtn">${icon.back}</button>
+          <div class="topbar-title">Settings</div>
+          <div style="width:36px"></div>
+        </div>
+        <div style="padding:20px 18px; flex:1; overflow-y:auto;">
+          <div class="quickadd-label">Business</div>
+          <div class="balance-card" style="margin:8px 0 20px; text-align:left;">
+            <div style="font-weight:700; font-size:15.5px;">${esc(meta.name || "")}</div>
+            <div style="font-size:13px; color:var(--ink-soft); margin-top:2px;">${esc(meta.identifier || "")}</div>
+          </div>
+
+          <div class="quickadd-label">Plan</div>
+          <div class="balance-card" style="margin:8px 0 20px; text-align:left;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span style="font-weight:700; font-size:15.5px;">MyTab ${planLabel}</span>
+              ${billingStatus && billingStatus.customerLimit != null ? `<span style="font-size:12.5px; color:var(--ink-soft);">${billingStatus.customerCount}/${billingStatus.customerLimit} customers</span>` : ""}
+            </div>
+            ${isPro()
+              ? `<button class="ghost-btn" id="manageSubBtn" style="margin-top:12px; width:100%; justify-content:center;" ${manageLinkBusy ? "disabled" : ""}>${manageLinkBusy ? "Loading…" : "Manage subscription"}</button>`
+              : `<button class="settle-btn" id="settingsUpgradeBtn" style="margin-top:12px; width:100%;">Upgrade to Pro</button>`}
+          </div>
+
+          <div class="quickadd-label">Reports & export</div>
+          <div class="balance-card" style="margin:8px 0 20px; text-align:left;">
+            ${isPro()
+              ? `<button class="settle-btn" id="goReportsBtn" style="width:100%;">View reports & export CSV</button>`
+              : `<div style="font-size:13px; color:var(--ink-soft); margin-bottom:10px;">See weekly/monthly totals and export your full customer ledger as a spreadsheet.</div><button class="settle-btn" id="reportsUpgradeBtn" style="width:100%;">Unlock with Pro</button>`}
+          </div>
+
+          <div class="quickadd-label">App lock</div>
+          <div class="stage-form" style="margin:8px 0 20px;">
+            <label>${meta.pin ? "Change 4-digit code" : "Set a 4-digit code"} <span class="optional">(locks the app on this device)</span>
+              <input id="settingsPinInput" type="tel" inputmode="numeric" maxlength="4" placeholder="e.g. 1234" value="${esc(settingsPinInput)}" />
+            </label>
+            ${settingsPinError ? `<div class="stage-error">${esc(settingsPinError)}</div>` : ""}
+            <div class="settle-actions">
+              <button class="settle-btn" id="savePinBtn" ${settingsPinBusy ? "disabled" : ""}>${settingsPinBusy ? "Saving…" : "Save code"}</button>
+              ${meta.pin ? `<button class="ghost-btn" id="removePinBtn" ${settingsPinBusy ? "disabled" : ""}>Remove code</button>` : ""}
+            </div>
+          </div>
+
+          <button class="ghost-btn" id="logoutBtn" style="width:100%; justify-content:center; color:var(--red); border-color:var(--red-bg);">Log out</button>
+        </div>
+      </div>`;
+    }
+
+    function renderReports() {
+      const d = reportsData;
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="reportsBackBtn">${icon.back}</button>
+          <div class="topbar-title">Reports</div>
+          <div style="width:36px"></div>
+        </div>
+        <div style="padding:16px 18px; flex:1; overflow-y:auto;">
+          <div class="quick-row">
+            <button class="chip${reportsRange === "week" ? " chip--active" : ""}" data-range="week">This week</button>
+            <button class="chip${reportsRange === "month" ? " chip--active" : ""}" data-range="month">This month</button>
+            <button class="chip${reportsRange === "all" ? " chip--active" : ""}" data-range="all">All time</button>
+          </div>
+
+          ${reportsBusy && !d ? `<div class="empty"><div class="empty-title">Loading…</div></div>` : ""}
+          ${d ? `
+            <div class="balance-card" style="margin:16px 0 12px; text-align:left;">
+              <div class="balance-label">Collected (${esc(reportsRange === "all" ? "all time" : reportsRange === "week" ? "this week" : "this month")})</div>
+              <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:26px; color:var(--green);">${fmt(d.totalCollected)}</div>
+              <div class="stage-hint" style="margin-top:2px;">${d.paymentsCount} payment${d.paymentsCount === 1 ? "" : "s"} recorded</div>
+            </div>
+            <div class="balance-card" style="margin-bottom:12px; text-align:left;">
+              <div class="balance-label">Still outstanding</div>
+              <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:26px; color:var(--red);">${fmt(d.totalOutstanding)}</div>
+              <div class="stage-hint" style="margin-top:2px;">Across all unpaid customers, all time</div>
+            </div>
+            <div class="balance-card" style="margin-bottom:12px; text-align:left;">
+              <div class="balance-label">New debt recorded (${esc(reportsRange === "all" ? "all time" : reportsRange === "week" ? "this week" : "this month")})</div>
+              <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:20px;">${fmt(d.newDebtsAmount)}</div>
+              <div class="stage-hint" style="margin-top:2px;">${d.newDebtsCount} new entr${d.newDebtsCount === 1 ? "y" : "ies"}</div>
+            </div>
+            ${d.topOwing.length > 0 ? `
+              <div class="quickadd-label" style="margin-top:6px;">Owes you the most</div>
+              <div class="balance-card" style="margin-top:8px; text-align:left;">
+                ${d.topOwing.map((c, i) => `<div style="display:flex; justify-content:space-between; padding:${i === 0 ? "0" : "8px"} 0 0;">
+                  <span style="font-size:14px; font-weight:600;">${esc(c.name)}</span>
+                  <span style="font-size:14px; font-weight:700; color:var(--red);">${fmt(c.balance)}</span>
+                </div>`).join("")}
+              </div>` : ""}
+          ` : ""}
+
+          <button class="ghost-btn" id="exportCsvBtn" style="width:100%; justify-content:center; margin-top:20px;" ${exportBusy ? "disabled" : ""}>${exportBusy ? "Preparing…" : "Export full ledger as CSV"}</button>
+        </div>
+      </div>`;
+    }
+
     function renderAddDebtor() {
       return `<div class="screen">
         <div class="topbar">
@@ -1053,6 +1281,7 @@
       debtors = pulled || [];
       saveDebtors();
       if (pullErr) flash("Logged in, but couldn't load your data yet.");
+      await fetchBillingStatus();
 
       stage = business.has_pin ? "pinlock" : "app";
       pinInput = "";
@@ -1097,8 +1326,94 @@
       markOnboarded();
       debtors = [];
       saveDebtors();
+      await fetchBillingStatus();
 
       stage = "app";
+      render();
+    }
+
+    async function handleUpgradeSubscribe() {
+      upgradeError = "";
+      if (!upgradeEmail || !upgradeEmail.includes("@")) {
+        upgradeError = "Enter a valid email to continue.";
+        render();
+        return;
+      }
+      upgradeBusy = true; render();
+
+      const res = await apiFetch("/billing/subscribe", {
+        method: "POST",
+        body: JSON.stringify({ interval: upgradeInterval, email: upgradeEmail }),
+      });
+
+      upgradeBusy = false;
+
+      if (!res.ok) {
+        upgradeError = res.error || "Couldn't start checkout, try again.";
+        render();
+        return;
+      }
+
+      window.location.href = res.data.authorizationUrl;
+    }
+
+    async function handleUpgradeRefresh() {
+      upgradeBusy = true; render();
+      await fetchBillingStatus();
+      upgradeBusy = false;
+      if (isPro()) {
+        flash("You're on Pro now!");
+        view = "home";
+      }
+      render();
+    }
+
+    async function handleManageSubscription() {
+      manageLinkBusy = true; render();
+      const res = await apiFetch("/billing/manage-link", { method: "GET" });
+      manageLinkBusy = false;
+      if (!res.ok) { flash(res.error || "Couldn't open management page."); render(); return; }
+      window.open(res.data.link, "_blank");
+      render();
+    }
+
+    async function handleSavePin() {
+      settingsPinError = "";
+      if (!/^\d{4}$/.test(settingsPinInput)) {
+        settingsPinError = "Enter exactly 4 digits.";
+        render();
+        return;
+      }
+      settingsPinBusy = true; render();
+      const res = await apiFetch("/auth/set-pin", { method: "POST", body: JSON.stringify({ pin: settingsPinInput }) });
+      settingsPinBusy = false;
+      if (!res.ok) { settingsPinError = res.error || "Couldn't save, try again."; render(); return; }
+      const meta = getBusinessMeta();
+      setBusinessMeta({ ...meta, pin: settingsPinInput });
+      settingsPinInput = "";
+      flash("Code saved");
+      render();
+    }
+
+    async function handleRemovePin() {
+      settingsPinBusy = true; render();
+      const res = await apiFetch("/auth/set-pin", { method: "POST", body: JSON.stringify({ pin: "" }) });
+      settingsPinBusy = false;
+      if (!res.ok) { settingsPinError = res.error || "Couldn't remove, try again."; render(); return; }
+      const meta = getBusinessMeta();
+      setBusinessMeta({ ...meta, pin: "" });
+      flash("Code removed");
+      render();
+    }
+
+    function handleLogout() {
+      clearSession();
+      debtors = [];
+      billingStatus = null;
+      reportsData = null;
+      stage = "splash";
+      view = "home";
+      loginIdentifier = ""; loginPin = ""; needsLoginPin = false; loginError = "";
       render();
     }
 
@@ -1109,6 +1424,7 @@
         stage = "app";
         render();
         refreshFromServerIfIdle();
+        fetchBillingStatus();
       } else {
         pinError = "That code doesn't match, try again.";
         pinInput = "";
@@ -1161,6 +1477,37 @@
       if (addDebtorBtn) addDebtorBtn.addEventListener("click", goAddDebtor);
       const greetingsBtn = document.getElementById("greetingsBtn");
       if (greetingsBtn) greetingsBtn.addEventListener("click", goGreetings);
+      const homeUpgradeBanner = document.getElementById("homeUpgradeBanner");
+      if (homeUpgradeBanner) homeUpgradeBanner.addEventListener("click", goUpgrade);
+      const homeOverdueBanner = document.getElementById("homeOverdueBanner");
+      if (homeOverdueBanner) homeOverdueBanner.addEventListener("click", () => { tab = "today"; render(); });
+      const settingsBtn = document.getElementById("settingsBtn");
+      if (settingsBtn) settingsBtn.addEventListener("click", goSettings);
+
+      const settingsBackBtn = document.getElementById("settingsBackBtn");
+      if (settingsBackBtn) settingsBackBtn.addEventListener("click", goHome);
+      const settingsUpgradeBtn = document.getElementById("settingsUpgradeBtn");
+      if (settingsUpgradeBtn) settingsUpgradeBtn.addEventListener("click", goUpgrade);
+      const manageSubBtn = document.getElementById("manageSubBtn");
+      if (manageSubBtn) manageSubBtn.addEventListener("click", handleManageSubscription);
+      const settingsPinInputEl = document.getElementById("settingsPinInput");
+      if (settingsPinInputEl) settingsPinInputEl.addEventListener("input", (e) => { settingsPinInput = e.target.value.replace(/\D/g, "").slice(0, 4); });
+      const savePinBtn = document.getElementById("savePinBtn");
+      if (savePinBtn) savePinBtn.addEventListener("click", handleSavePin);
+      const removePinBtn = document.getElementById("removePinBtn");
+      if (removePinBtn) removePinBtn.addEventListener("click", handleRemovePin);
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+      const goReportsBtn = document.getElementById("goReportsBtn");
+      if (goReportsBtn) goReportsBtn.addEventListener("click", goReports);
+      const reportsUpgradeBtn = document.getElementById("reportsUpgradeBtn");
+      if (reportsUpgradeBtn) reportsUpgradeBtn.addEventListener("click", goUpgrade);
+
+      const reportsBackBtn = document.getElementById("reportsBackBtn");
+      if (reportsBackBtn) reportsBackBtn.addEventListener("click", goHome);
+      root.querySelectorAll("[data-range]").forEach((el) => el.addEventListener("click", () => { reportsRange = el.dataset.range; fetchReports(); }));
+      const exportCsvBtn = document.getElementById("exportCsvBtn");
+      if (exportCsvBtn) exportCsvBtn.addEventListener("click", handleExportCsv);
       const installBtn = document.getElementById("installBtn");
       if (installBtn) installBtn.addEventListener("click", async () => {
         if (deferredInstallPrompt) {
@@ -1175,6 +1522,24 @@
       });
       const installBackBtn = document.getElementById("installBackBtn");
       if (installBackBtn) installBackBtn.addEventListener("click", goHome);
+
+      const upgradeBackBtn = document.getElementById("upgradeBackBtn");
+      if (upgradeBackBtn) upgradeBackBtn.addEventListener("click", goHome);
+      root.querySelectorAll("[data-interval]").forEach((el) => el.addEventListener("click", () => { upgradeInterval = el.dataset.interval; render(); }));
+      const upgradeEmailInput = document.getElementById("upgradeEmailInput");
+      if (upgradeEmailInput) {
+        upgradeEmailInput.addEventListener("input", (e) => {
+          upgradeEmail = e.target.value;
+          const caret = e.target.selectionStart;
+          render();
+          const again = document.getElementById("upgradeEmailInput");
+          if (again) { again.focus(); again.setSelectionRange(caret, caret); }
+        });
+      }
+      const upgradeSubscribeBtn = document.getElementById("upgradeSubscribeBtn");
+      if (upgradeSubscribeBtn) upgradeSubscribeBtn.addEventListener("click", handleUpgradeSubscribe);
+      const upgradeRefreshBtn = document.getElementById("upgradeRefreshBtn");
+      if (upgradeRefreshBtn) upgradeRefreshBtn.addEventListener("click", handleUpgradeRefresh);
 
       const greetingsBackBtn = document.getElementById("greetingsBackBtn");
       if (greetingsBackBtn) greetingsBackBtn.addEventListener("click", goHome);
@@ -1307,6 +1672,7 @@
 
     render();
     refreshFromServerIfIdle();
+    fetchBillingStatus();
   </script>
 </body>
 </html>
