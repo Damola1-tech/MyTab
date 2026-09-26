@@ -581,13 +581,15 @@
     /* ---------- actions ---------- */
     function goHome() { view = "home"; render(); }
     function openDebtor(id) { selectedId = id; view = "detail"; openEntryId = null; openMode = null; addingEntry = false; editingCustomer = false; render(); }
-    function goAddDebtor() {
+    async function goAddDebtor() {
+      if (billingStatus === null && getToken()) await fetchBillingStatus();
       if (!isPro() && billingStatus && billingStatus.customerLimit != null && debtors.length >= billingStatus.customerLimit) {
         view = "upgrade"; render(); return;
       }
       view = "addDebtor"; render();
     }
-    function goGreetings() {
+    async function goGreetings() {
+      if (billingStatus === null && getToken()) await fetchBillingStatus();
       if (!isPro()) { view = "upgrade"; render(); return; }
       view = "greetings"; render();
     }
