@@ -368,6 +368,16 @@
     }
 
     window.addEventListener("online", () => { drainQueue(); refreshFromServerIfIdle(); });
+document.addEventListener("visibilitychange", () => {
+  // Catches the common PWA case: the app was just backgrounded (not fully
+  // closed), so page-load-only refresh logic never re-ran, and another
+  // device may have added data in the meantime.
+  if (document.visibilityState === "visible") {
+    drainQueue();
+    refreshFromServerIfIdle();
+    fetchBillingStatus();
+  }
+});
     setInterval(drainQueue, 20000); // fallback in case the 'online' event is missed
     drainQueue(); // attempt on load, in case ops were queued last session while offline
 
