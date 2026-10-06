@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Privacy Policy · MyTab</title>
+<meta name="description" content="MyTab's Privacy Policy." />
+<link rel="icon" type="image/png" sizes="32x32" href="app/favicon-32.png" />
+<meta name="theme-color" content="#2F6B4F" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap');
+  :root {
+    --bg:#F6F1E4; --surface:#FFFDF8; --ink:#23301F; --ink-soft:#6A7361; --line:#E4DCC6;
+    --primary:#2F6B4F; --primary-dark:#1F4B37; --accent:#C6861D;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; line-height:1.65; }
+  a { color:var(--primary-dark); }
+  .wrap { max-width:720px; margin:0 auto; padding:0 24px; }
+  .nav { display:flex; align-items:center; justify-content:space-between; padding:22px 0; }
+  .nav-brand { font-family:'Source Serif 4',serif; font-weight:700; font-size:19px; text-decoration:none; color:var(--ink); }
+  .nav-back { font-size:13.5px; font-weight:600; text-decoration:none; color:var(--ink-soft); }
+  h1 { font-family:'Source Serif 4',serif; font-weight:700; font-size:32px; margin:30px 0 6px; }
+  .updated { font-size:13px; color:var(--ink-soft); margin-bottom:36px; }
+  h2 { font-family:'Source Serif 4',serif; font-weight:700; font-size:19px; margin:34px 0 10px; }
+  p, li { font-size:15px; color:var(--ink); }
+  ul { padding-left:20px; }
+  table { width:100%; border-collapse:collapse; margin:14px 0; }
+  th, td { text-align:left; padding:10px 12px; font-size:13.5px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--ink-soft); font-weight:700; }
+  footer { border-top:1px solid var(--line); margin-top:50px; padding:24px 0 50px; font-size:13px; color:var(--ink-soft); }
+  @media (max-width:600px) { h1 { font-size:26px; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a class="nav-brand" href="/">MyTab</a>
+      <a class="nav-back" href="/">&larr; Back</a>
+    </div>
+
+    <h1>Privacy Policy</h1>
+    <div class="updated">Last updated: September 2026</div>
+
+    <p>This Policy explains what information MyTab collects, how it's used, and how it's protected. MyTab is built for shop owners ("you") who use it to keep records about their own customers ("your customers").</p>
+
+    <h2>1. Information we collect</h2>
+    <table>
+      <tr><th>About you (the shop owner)</th><td>Business name, phone number or email, business type, password/PIN (stored as a secure hash, never in plain text), and billing email if you subscribe to Pro.</td></tr>
+      <tr><th>About your customers</th><td>Whatever you choose to enter about them, typically name, phone number, birthday, and the items/amounts they owe. This is entered by you, not collected directly from your customers.</td></tr>
+      <tr><th>Payment information</th><td>Your Pro subscription payments are handled entirely by Paystack. MyTab never sees or stores your card details, only a reference confirming your subscription is active.</td></tr>
+    </table>
+
+    <h2>2. How we use this information</h2>
+    <ul>
+      <li>To run the core app, tracking debts, balances, and payments you record</li>
+      <li>To let you send WhatsApp reminders (this simply opens a pre-filled WhatsApp link on your own device. MyTab does not send messages on your behalf, and your customer's number is never shared with any third party for this)</li>
+      <li>To process your Pro subscription via Paystack</li>
+      <li>To keep your data backed up and synced across your devices</li>
+    </ul>
+
+    <h2>3. Where your data is stored</h2>
+    <p>MyTab's data is stored in a hosted PostgreSQL database (via Neon) and accessed through our backend (hosted on Render). Data is encrypted in transit. A copy of your own device's data is also kept on your device so MyTab works offline, and syncs back to the server once you're online.</p>
+
+    <h2>4. Who we share information with</h2>
+    <p>We don't sell your data or your customers' data. We share information only with the services needed to run MyTab:</p>
+    <ul>
+      <li><strong>Paystack</strong> - to process your Pro subscription payment (receives your billing email, not your customer data)</li>
+      <li><strong>Our hosting providers</strong> (Render, Neon) - to run and store the app's data securely</li>
+    </ul>
+    <p>We do not share your customers' names, phone numbers, or debt records with WhatsApp, Paystack, or any advertiser.</p>
+
+    <h2>5. Your rights</h2>
+    <p>You can view, edit, or delete any customer record directly in the app at any time. You can log out of a device at any time from Settings, which also clears that device's local copy of your data. To request full deletion of your MyTab account and associated data, contact us using the details below.</p>
+
+    <h2>6. Children</h2>
+    <p>MyTab is intended for business owners and is not directed at children. We don't knowingly collect information from children.</p>
+
+    <h2>7. Changes to this Policy</h2>
+    <p>If we make material changes to how we handle your data, we'll update this page and the "last updated" date above.</p>
+
+    <h2>8. Contact</h2>
+    <p>Questions about this Policy or your data can be sent to the contact details provided on our website.</p>
+
+    <footer>MyTab - put it on your tab.</footer>
+  </div>
+</body>
+</html>
