@@ -379,6 +379,7 @@ document.addEventListener("visibilitychange", () => {
   }
 });
     setInterval(drainQueue, 20000); // fallback in case the 'online' event is missed
+    setInterval(() => { refreshFromServerIfIdle(); fetchBillingStatus(); }, 90000); // periodic catch-up, covers two tabs/devices open at once
     drainQueue(); // attempt on load, in case ops were queued last session while offline
 
     function updateSyncIndicator() {
@@ -1382,9 +1383,14 @@ document.addEventListener("visibilitychange", () => {
 
     async function handleManageSubscription() {
       manageLinkBusy = true; render();
-      const res = await apiFetch("/billing/manage-link", { method: "GET" });
+      let res = await apiFetch("/billing/manage-link", { method: "GET" });
+      if (!res.ok && res.status === 0) {
+        flash("Waking up the server, trying again…");
+        await new Promise((r) => setTimeout(r, 4000));
+        res = await apiFetch("/billing/manage-link", { method: "GET" });
+      }
       manageLinkBusy = false;
-      if (!res.ok) { flash(res.error || "Couldn't open management page."); render(); return; }
+      if (!res.ok) { flash(res.error || "Couldn't open management page, try again in a moment."); render(); return; }
       window.open(res.data.link, "_blank");
       render();
     }
