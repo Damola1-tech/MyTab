@@ -121,7 +121,11 @@
   .primary-btn:disabled { opacity:0.45; cursor:not-allowed; }
 
   .toast { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); background:var(--ink); color:#F6F1E4; padding:10px 18px; border-radius:20px; font-size:13px; font-weight:600; box-shadow:0 10px 24px -10px rgba(0,0,0,0.5); z-index:10; }
-  .sync-dot { position:absolute; top:14px; right:16px; width:9px; height:9px; border-radius:50%; z-index:5; }
+  .sync-btn { position:absolute; top:8px; right:8px; z-index:6; display:flex; align-items:center; gap:6px; padding:8px 10px; background:transparent; border:0; cursor:pointer; color:var(--ink-soft, #6b6357); font:inherit; }
+  .sync-ico { font-size:18px; line-height:1; }
+  .sync-btn--spin .sync-ico { display:inline-block; animation:syncSpin .8s linear infinite; }
+  @keyframes syncSpin { to { transform:rotate(360deg); } }
+  .sync-dot { width:9px; height:9px; border-radius:50%; }
   .sync-dot--synced { background:#7fd99a; }
   .sync-dot--pending { background:#e8c76a; }
   .sync-dot--offline { background:#c9c1a4; }
@@ -367,20 +371,34 @@
       }
     }
 
-    window.addEventListener("online", () => { drainQueue(); refreshFromServerIfIdle(); });
-document.addEventListener("visibilitychange", () => {
-  // Catches the common PWA case: the app was just backgrounded (not fully
-  // closed), so page-load-only refresh logic never re-ran, and another
-  // device may have added data in the meantime.
-  if (document.visibilityState === "visible") {
-    drainQueue();
-    refreshFromServerIfIdle();
-    fetchBillingStatus();
-  }
-});
+    window.addEventListener("online", () => { drainQueue(); });
     setInterval(drainQueue, 20000); // fallback in case the 'online' event is missed
-    setInterval(() => { refreshFromServerIfIdle(); fetchBillingStatus(); }, 90000); // periodic catch-up, covers two tabs/devices open at once
     drainQueue(); // attempt on load, in case ops were queued last session while offline
+
+    // Manual refresh: the app no longer pulls data by itself. The person taps the refresh button when they want the latest.
+    let refreshing = false;
+    async function manualRefresh() {
+      if (refreshing) return;
+      if (!navigator.onLine) { flash("You're offline. Try again when you're back online."); return; }
+      if (!getToken()) return;
+      refreshing = true;
+      const btn = document.getElementById("syncBtn");
+      if (btn) btn.classList.add("sync-btn--spin");
+      try {
+        await drainQueue();
+        if (loadQueue().length > 0) { refreshing = false; flash("Some changes are still sending. Try again in a moment."); return; }
+        const { debtors: pulled, error } = await fetchCustomers();
+        if (error) { refreshing = false; flash("Couldn't refresh. Try again."); return; }
+        debtors = pulled;
+        saveDebtors();
+        fetchBillingStatus();
+        refreshing = false;
+        flash("Up to date");
+      } catch (e) {
+        refreshing = false;
+        flash("Couldn't refresh. Try again.");
+      }
+    }
 
     function updateSyncIndicator() {
       const dot = document.getElementById("syncDot");
@@ -723,9 +741,11 @@ document.addEventListener("visibilitychange", () => {
       else if (view === "settings") root.innerHTML = renderSettings();
       else if (view === "reports") root.innerHTML = renderReports();
 
-      if (stage === "app") root.innerHTML += `<div class="sync-dot" id="syncDot"></div>`;
+      if (stage === "app") root.innerHTML += `<button class="sync-btn" id="syncBtn" aria-label="Refresh"><span class="sync-dot" id="syncDot"></span><span class="sync-ico">↻</span></button>`;
       if (toastMsg) root.innerHTML += `<div class="toast">${esc(toastMsg)}</div>`;
       wireEvents();
+      const syncBtn = document.getElementById("syncBtn");
+      if (syncBtn) syncBtn.addEventListener("click", manualRefresh);
       if (stage === "app") updateSyncIndicator();
     }
 
@@ -1441,7 +1461,6 @@ document.addEventListener("visibilitychange", () => {
         pinError = "";
         stage = "app";
         render();
-        refreshFromServerIfIdle();
         fetchBillingStatus();
       } else {
         pinError = "That code doesn't match, try again.";
@@ -1689,7 +1708,6 @@ document.addEventListener("visibilitychange", () => {
     }
 
     render();
-    refreshFromServerIfIdle();
     fetchBillingStatus();
   </script>
 </body>
