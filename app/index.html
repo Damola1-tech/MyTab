@@ -371,11 +371,22 @@
       }
     }
 
-    window.addEventListener("online", () => { drainQueue(); });
+    window.addEventListener("online", () => { drainQueue(); refreshFromServerIfIdle(); });
+document.addEventListener("visibilitychange", () => {
+  // Catches the common PWA case: the app was just backgrounded (not fully
+  // closed), so page-load-only refresh logic never re-ran, and another
+  // device may have added data in the meantime.
+  if (document.visibilityState === "visible") {
+    drainQueue();
+    refreshFromServerIfIdle();
+    fetchBillingStatus();
+  }
+});
     setInterval(drainQueue, 20000); // fallback in case the 'online' event is missed
+    setInterval(() => { refreshFromServerIfIdle(); fetchBillingStatus(); }, 90000); // periodic catch-up, covers two tabs/devices open at once
     drainQueue(); // attempt on load, in case ops were queued last session while offline
 
-    // Manual refresh: the app no longer pulls data by itself. The person taps the refresh button when they want the latest.
+    // Manual refresh: another way to pull the latest data (the automatic refresh stays on).
     let refreshing = false;
     async function manualRefresh() {
       if (refreshing) return;
@@ -1461,6 +1472,7 @@
         pinError = "";
         stage = "app";
         render();
+        refreshFromServerIfIdle();
         fetchBillingStatus();
       } else {
         pinError = "That code doesn't match, try again.";
@@ -1708,6 +1720,7 @@
     }
 
     render();
+    refreshFromServerIfIdle();
     fetchBillingStatus();
   </script>
 </body>
