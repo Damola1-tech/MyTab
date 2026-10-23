@@ -1,0 +1,2618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MyTab BETA · Sales, I owe &amp; Summary</title>
+<meta name="description" content="Track who owes you, offline-friendly, built for a busy market." />
+<link rel="manifest" href="../manifest.json" />
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="../favicon-16.png" />
+<link rel="apple-touch-icon" href="../apple-touch-icon.png" />
+<meta name="theme-color" content="#2F6B4F" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="MyTab" />
+<meta name="mobile-web-app-capable" content="yes" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap');
+  :root {
+    --bg:#F6F1E4; --surface:#FFFDF8; --ink:#23301F; --ink-soft:#6A7361; --line:#E4DCC6;
+    --primary:#2F6B4F; --primary-dark:#1F4B37; --accent:#C6861D;
+    --red:#B3402D; --red-bg:#F5DFD9; --yellow:#B4790F; --yellow-bg:#F7EAC9; --green:#3F7D4D; --green-bg:#E1EEE3;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; }
+  body { min-height:100vh; background:linear-gradient(180deg,#EFE8D6 0%,var(--bg) 220px); display:flex; justify-content:center; padding:24px 12px; font-family:'Inter',sans-serif; color:var(--ink); }
+  #phone { width:100%; max-width:420px; min-height:740px; background:var(--surface); border-radius:22px; box-shadow:0 1px 0 rgba(35,48,31,0.06),0 20px 40px -24px rgba(35,48,31,0.35); overflow:hidden; position:relative; display:flex; flex-direction:column; border:1px solid var(--line); }
+  .screen { display:flex; flex-direction:column; flex:1; min-height:740px; }
+
+  .hero { background:var(--primary); color:#F3EFE1; padding:24px 20px 18px; }
+  .brand-name { font-family:'Source Serif 4',serif; font-weight:700; font-size:17px; opacity:0.9; }
+  .hero-label { font-size:12.5px; color:rgba(243,239,225,0.75); margin-top:10px; }
+  .hero-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:36px; }
+
+  .tabs { display:flex; gap:6px; margin:14px 18px 0; background:var(--bg); border-radius:10px; padding:4px; }
+  .tab { flex:1; border:none; background:transparent; padding:9px; border-radius:8px; font-weight:700; font-size:13px; color:var(--ink-soft); cursor:pointer; font-family:inherit; }
+  .tab--active { background:var(--surface); color:var(--primary); box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+
+  .searchbar { margin:12px 18px 0; display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .searchbar input { border:none; outline:none; background:transparent; font-size:14.5px; width:100%; font-family:inherit; color:var(--ink); }
+
+  .list { flex:1; overflow-y:auto; padding:12px 16px 90px; display:flex; flex-direction:column; gap:9px; }
+  .glance-note { font-size:11.5px; color:var(--ink-soft); margin-bottom:2px; font-weight:600; }
+
+  .grow { display:flex; align-items:center; gap:12px; border:none; border-radius:14px; padding:18px 16px; cursor:pointer; font-family:inherit; text-align:left; width:100%; }
+  .grow-name { flex:1; font-size:17px; font-weight:700; }
+  .grow-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:17px; }
+  .grow-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .grow--red { background:var(--red-bg); color:var(--red); }
+  .grow--red .grow-dot { background:var(--red); }
+  .grow--yellow { background:var(--yellow-bg); color:var(--yellow); }
+  .grow--yellow .grow-dot { background:var(--yellow); }
+  .grow--green { background:var(--green-bg); color:var(--green); }
+  .grow--green .grow-dot { background:var(--green); }
+  .grow--green .grow-amount { font-size:13px; font-family:'Inter'; font-weight:600; }
+
+  .empty { padding:40px 10px; text-align:center; }
+  .empty-title { font-weight:700; margin-bottom:4px; font-size:15px; }
+  .empty-sub { font-size:13px; color:var(--ink-soft); }
+
+  .fab { position:absolute; right:20px; bottom:22px; width:58px; height:58px; border-radius:50%; background:var(--accent); color:#2A1D06; border:none; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 20px -8px rgba(198,134,29,0.6); cursor:pointer; }
+
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:18px 14px; border-bottom:1px solid var(--line); }
+  .topbar-title { font-weight:700; font-size:16px; flex:1; text-align:center; }
+  .iconbtn { width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:var(--surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink); }
+  .iconbtn--danger { color:var(--red); }
+
+  .balance-card { margin:16px 18px; background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:18px; text-align:center; }
+  .balance-label { font-size:12.5px; color:var(--ink-soft); margin-bottom:4px; }
+  .balance-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:30px; color:var(--red); }
+  .balance-amount--clear { color:var(--green); }
+  .wa-btn { margin-top:12px; display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--primary-dark); background:var(--green-bg); border-radius:8px; padding:9px 13px; text-decoration:none; }
+
+  .entries { flex:1; overflow-y:auto; padding:0 14px; }
+  .entry { border-bottom:1px solid var(--line); }
+  .entry-row { display:flex; align-items:center; justify-content:space-between; padding:15px 4px; cursor:pointer; gap:8px; }
+  .entry-item { font-size:15.5px; font-weight:700; }
+  .entry-date { font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .entry-right { text-align:right; }
+  .entry-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:16px; }
+  .entry-amount--paid { color:var(--ink-soft); text-decoration:line-through; }
+  .tag { margin-top:4px; font-size:11px; display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-weight:700; }
+  .tag--paid { background:var(--green-bg); color:var(--green); }
+  .tag--partial { background:var(--yellow-bg); color:var(--yellow); }
+  .tag--unpaid { background:var(--red-bg); color:var(--red); }
+  .entry-icons { display:flex; gap:4px; flex-shrink:0; }
+  .entry-icon-btn { width:26px; height:26px; border-radius:7px; border:1px solid var(--line); background:var(--surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-soft); }
+  .entry-icon-btn--danger { color:var(--red); }
+
+  .settle-form, .quickadd { padding:10px 4px 16px; display:flex; flex-direction:column; gap:10px; }
+  .delete-confirm-text { font-size:12.5px; color:var(--ink-soft); line-height:1.4; }
+  .quick-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { border:1px solid var(--line); background:var(--surface); border-radius:10px; padding:10px 13px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; color:var(--ink); }
+  .chip--active { background:var(--primary); border-color:var(--primary); color:#fff; }
+  .chip--ghost { color:var(--ink-soft); }
+  .chip--mic { display:flex; align-items:center; gap:5px; color:var(--accent); border-color:var(--accent); }
+  .chip--listening { background:var(--accent); color:#fff; }
+  .custom-row { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:10px; padding:4px 4px 4px 12px; background:var(--surface); }
+  .custom-prefix { font-weight:700; color:var(--ink-soft); font-size:14px; }
+  .custom-input { flex:1; border:none; outline:none; background:transparent; font-size:15px; font-family:inherit; padding:8px 0; color:var(--ink); }
+  .custom-go { background:var(--primary); color:#fff; border:none; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .custom-go:disabled { opacity:0.4; cursor:not-allowed; }
+  .settle-actions { display:flex; gap:8px; }
+  .settle-btn, .ghost-btn, .settle-full { border-radius:10px; border:none; font-size:14px; font-weight:700; padding:12px 14px; cursor:pointer; font-family:inherit; }
+  .settle-btn, .settle-full { background:var(--primary); color:#fff; }
+  .settle-btn { flex:1; }
+  .settle-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .settle-btn--danger { background:var(--red); }
+  .ghost-btn { background:transparent; border:1px solid var(--line); color:var(--ink-soft); display:flex; align-items:center; gap:4px; }
+
+  .quickadd-label { font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.03em; }
+  .amount-display { font-family:'Source Serif 4',serif; font-weight:700; font-size:30px; color:var(--primary); }
+  .plain-input { border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; font-family:inherit; width:100%; }
+
+  .form { padding:16px 18px; display:flex; flex-direction:column; gap:16px; flex:1; }
+  .form label { font-size:13px; font-weight:700; color:var(--ink-soft); display:flex; flex-direction:column; gap:6px; }
+  .form .optional { font-weight:400; opacity:0.8; }
+  .form input { border:1px solid var(--line); border-radius:10px; padding:12px; font-size:16px; font-family:inherit; color:var(--ink); }
+
+  .primary-btn { margin:8px 18px 20px; background:var(--primary); color:#fff; border:none; border-radius:12px; padding:15px; font-size:15.5px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; font-family:inherit; }
+  .primary-btn:disabled { opacity:0.45; cursor:not-allowed; }
+
+  .toast { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); background:var(--ink); color:#F6F1E4; padding:10px 18px; border-radius:20px; font-size:13px; font-weight:600; box-shadow:0 10px 24px -10px rgba(0,0,0,0.5); z-index:10; }
+  .sync-btn { position:absolute; top:8px; right:8px; z-index:6; display:flex; align-items:center; gap:6px; padding:8px 10px; background:transparent; border:0; cursor:pointer; color:var(--ink-soft, #6b6357); font:inherit; }
+  .sync-ico { font-size:18px; line-height:1; }
+  .sync-btn--spin .sync-ico { display:inline-block; animation:syncSpin .8s linear infinite; }
+  @keyframes syncSpin { to { transform:rotate(360deg); } }
+  .sync-dot { width:9px; height:9px; border-radius:50%; }
+  .sync-dot--synced { background:#7fd99a; }
+  .sync-dot--pending { background:#e8c76a; }
+  .sync-dot--offline { background:#c9c1a4; }
+  svg { display:block; }
+
+  .center-screen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 24px; }
+  .splash-brand { font-family:'Source Serif 4',serif; font-weight:700; font-size:34px; color:var(--primary); }
+  .splash-tag { font-size:14px; color:var(--ink-soft); margin-top:6px; }
+  .splash-lede { font-size:13.5px; color:var(--ink-soft); margin-top:18px; line-height:1.5; max-width:280px; }
+  .stage-form { width:100%; margin-top:26px; text-align:left; display:flex; flex-direction:column; gap:14px; }
+  .stage-form label { font-size:13px; font-weight:700; color:var(--ink-soft); display:flex; flex-direction:column; gap:6px; }
+  .stage-form .optional { font-weight:400; opacity:0.8; }
+  .stage-form input, .stage-form select { border:1px solid var(--line); border-radius:10px; padding:12px; font-size:15px; font-family:inherit; color:var(--ink); background:var(--surface); }
+  .stage-hint { font-size:12px; color:var(--ink-soft); margin-top:-6px; }
+  .stage-error { font-size:12.5px; color:var(--red); }
+  .pin-dots { display:flex; gap:14px; justify-content:center; margin:10px 0 4px; }
+  .pin-dot { width:16px; height:16px; border-radius:50%; border:1.5px solid var(--line); }
+  .pin-dot--filled { background:var(--primary); border-color:var(--primary); }
+  /* ===== BETA: sales / I owe / summary ===== */
+  #phone.has-nav { padding-bottom:64px; }
+  #phone.has-nav .fab { bottom:80px; }
+  #phone.has-nav .toast { bottom:76px; }
+  .beta-chip { display:inline-block; font-size:9px; font-weight:800; letter-spacing:.06em; background:var(--accent); color:#2A1D06; padding:2px 6px; border-radius:6px; vertical-align:middle; margin-left:4px; }
+  .biz-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:420px; display:flex; background:var(--surface); border-top:1px solid var(--line); z-index:8; padding-bottom:env(safe-area-inset-bottom,0); }
+  .biz-nav-btn { flex:1; border:none; background:transparent; padding:9px 2px 8px; display:flex; flex-direction:column; align-items:center; gap:3px; font-family:inherit; font-size:10.5px; font-weight:700; color:var(--ink-soft); cursor:pointer; }
+  .biz-nav-btn--on { color:var(--primary); }
+  .biz-body { padding:14px 18px 40px; flex:1; }
+  .biz-dim { color:var(--ink-soft); font-size:12.5px; font-weight:500; }
+  .biz-eg { font-size:12px; color:var(--ink-soft); text-align:center; margin-top:6px; }
+  .biz-heard { margin-top:10px; font-size:12.5px; background:var(--yellow-bg); color:var(--yellow); padding:8px 10px; border-radius:10px; font-weight:600; }
+  .biz-owehint { margin-top:6px; font-size:12.5px; font-weight:700; color:#F7D9A0; }
+  .biz-mic { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; border:1.5px solid var(--accent); background:#FBF3DF; color:#7A520A; border-radius:14px; padding:14px; font-family:inherit; font-size:14.5px; font-weight:700; cursor:pointer; }
+  .biz-mic svg { width:18px; height:18px; }
+  .biz-mic--on { background:var(--accent); color:#fff; animation:bizpulse 1.1s infinite; }
+  @keyframes bizpulse { 50% { box-shadow:0 0 0 7px rgba(198,134,29,.25); } }
+  .biz-card { background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:12px; }
+  .biz-h { font-weight:800; font-size:13.5px; margin-bottom:8px; }
+  .biz-line { border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:8px; background:var(--surface); }
+  .biz-line-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .biz-line-name { font-weight:700; font-size:14.5px; }
+  .biz-line-row { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .biz-line-total { margin-left:auto; font-weight:800; font-size:14.5px; }
+  .biz-new { font-size:9.5px; font-weight:800; background:var(--green-bg); color:var(--green); padding:2px 6px; border-radius:6px; text-transform:uppercase; }
+  .biz-step { display:flex; align-items:center; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .biz-step button { width:34px; height:34px; border:none; background:var(--bg); font-size:18px; font-weight:700; cursor:pointer; color:var(--ink); }
+  .biz-step span { min-width:30px; text-align:center; font-weight:800; }
+  .biz-price { width:84px; border:1px solid var(--line); border-radius:10px; padding:8px; font-size:15px; font-family:inherit; color:var(--ink); }
+  .biz-price--need { border-color:var(--red); background:var(--red-bg); }
+  .biz-x { border:none; background:transparent; color:var(--ink-soft); cursor:pointer; padding:6px; display:flex; }
+  .biz-pay { display:flex; gap:8px; margin-top:14px; }
+  .biz-pay .chip { flex:1; }
+  .biz-hist { display:flex; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid var(--line); }
+  .biz-hist-main { font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; }
+  .biz-hist-amt { font-weight:800; font-size:14px; white-space:nowrap; }
+  .biz-row { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:13px 14px; margin-top:8px; cursor:pointer; font-family:inherit; color:var(--ink); }
+  .biz-row-name { font-weight:700; font-size:15px; }
+  .biz-row-amt { font-weight:800; color:var(--red); font-size:15px; }
+  .biz-row-amt--dim { color:var(--green); font-size:12.5px; }
+  .biz-inline { display:flex; gap:8px; margin-top:8px; align-items:stretch; }
+  .biz-inline input, .biz-full { flex:1; border:1px solid var(--line); border-radius:10px; padding:12px; font-size:15px; font-family:inherit; color:var(--ink); background:var(--surface); min-width:0; }
+  .biz-full { width:100%; margin-top:8px; }
+  .biz-inline .biz-mic { width:auto; padding:0 14px; border-radius:10px; font-size:13px; }
+  .biz-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .biz-stat { background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:12px 14px; display:flex; flex-direction:column; gap:2px; }
+  .biz-stat b { font-size:17px; }
+  .biz-hrow { margin-top:10px; }
+  .biz-hname { display:flex; justify-content:space-between; gap:8px; font-weight:700; font-size:13.5px; margin-bottom:4px; }
+  .biz-hbar { height:9px; background:var(--line); border-radius:6px; overflow:hidden; margin-top:6px; }
+  .biz-hbar span { display:block; height:100%; background:var(--primary); border-radius:6px; }
+  .biz-cmp { display:grid; grid-template-columns:1fr 44px 44px 22px; gap:6px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px; align-items:center; }
+  .biz-cmp:last-child { border-bottom:none; }
+  .biz-cmp--head { font-size:11px; color:var(--ink-soft); font-weight:700; text-transform:uppercase; }
+  .biz-cmp-n { font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .biz-locked { position:relative; margin-top:14px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--bg); }
+  .biz-blur { filter:blur(4px); opacity:.65; padding:14px; pointer-events:none; }
+  .biz-lock-over { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px; background:rgba(255,253,248,.55); }
+  .biz-preview { display:block; margin:16px auto 0; background:none; border:none; color:var(--ink-soft); font-size:12px; text-decoration:underline; cursor:pointer; font-family:inherit; }
+</style>
+</head>
+<body>
+  <div id="phone"></div>
+
+  <script>
+    /* ================= BACKEND API ================= */
+    const API_BASE = "https://mytab-backend-ch5s.onrender.com";
+
+    let billingStatus = null; // { plan, subscriptionStatus, customerCount, customerLimit }
+    async function fetchBillingStatus() {
+      const res = await apiFetch("/billing/status", { method: "GET" });
+      if (res.ok) {
+        billingStatus = res.data;
+        if (stage === "app") render();
+      }
+      return res;
+    }
+    function isPro() { return billingStatus && billingStatus.plan === "pro"; }
+
+    /* ---------- Add to Home Screen ---------- */
+    let deferredInstallPrompt = null;
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+    });
+    function isStandalone() {
+      return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    }
+
+    /* ---------- this device's business identity ---------- */
+    const BUSINESS_ID_KEY = "mytab_business_id_v1";
+    const BUSINESS_META_KEY = "mytab_business_meta_v1"; // { name, identifier, type, pin }
+    const ONBOARDED_KEY = "mytab_onboarded_v1";
+    const TOKEN_KEY = "mytab_token_v1";
+    const ID_MAP_KEY = "mytab_id_map_v1";
+
+    function getBusinessId() { return localStorage.getItem(BUSINESS_ID_KEY); }
+    function setBusinessId(id) { localStorage.setItem(BUSINESS_ID_KEY, id); }
+    function getBusinessMeta() {
+      try { return JSON.parse(localStorage.getItem(BUSINESS_META_KEY)) || {}; }
+      catch (e) { return {}; }
+    }
+    function setBusinessMeta(meta) { localStorage.setItem(BUSINESS_META_KEY, JSON.stringify(meta)); }
+    function isOnboarded() { return localStorage.getItem(ONBOARDED_KEY) === "1"; }
+    function markOnboarded() { localStorage.setItem(ONBOARDED_KEY, "1"); }
+    function getToken() { return localStorage.getItem(TOKEN_KEY); }
+    function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+    function clearSession() {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(BUSINESS_ID_KEY);
+      localStorage.removeItem(BUSINESS_META_KEY);
+      localStorage.removeItem(ONBOARDED_KEY);
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(QUEUE_KEY);
+      localStorage.removeItem(ID_MAP_KEY);
+    }
+
+    let BUSINESS_ID = getBusinessId(); // may be null until onboarding/login completes
+
+    /* ---------- local id -> server id map (for ops created while offline) ---------- */
+    function loadIdMap() {
+      try { return JSON.parse(localStorage.getItem(ID_MAP_KEY)) || {}; }
+      catch (e) { return {}; }
+    }
+    function saveIdMap(m) { try { localStorage.setItem(ID_MAP_KEY, JSON.stringify(m)); } catch (e) {} }
+    function resolveId(id) { const m = loadIdMap(); return m[id] || id; }
+    function remapId(tempId, realId, kind) {
+      if (!tempId || tempId === realId) return;
+      const m = loadIdMap();
+      m[tempId] = realId;
+      saveIdMap(m);
+
+      if (kind === "customer") {
+        const d = debtors.find((x) => x.id === tempId);
+        if (d) d.id = realId;
+        if (selectedId === tempId) selectedId = realId;
+      } else if (kind === "debt") {
+        debtors.forEach((d) => {
+          const e = d.entries.find((x) => x.id === tempId);
+          if (e) e.id = realId;
+        });
+        if (openEntryId === tempId) openEntryId = realId;
+      }
+      saveDebtors();
+
+      let q = loadQueue();
+      q = q.map((o) => {
+        const clone = Object.assign({}, o);
+        if (clone.customerId === tempId) clone.customerId = realId;
+        if (clone.id === tempId) clone.id = realId;
+        if (clone.debtId === tempId) clone.debtId = realId;
+        return clone;
+      });
+      saveQueue(q);
+    }
+
+    /* ---------- generic authenticated fetch helper ---------- */
+    async function apiFetch(path, options) {
+      options = options || {};
+      const token = getToken();
+      const headers = Object.assign({ "Content-Type": "application/json" }, options.headers || {});
+      if (token) headers.Authorization = "Bearer " + token;
+      try {
+        const res = await fetch(API_BASE + path, Object.assign({}, options, { headers }));
+        let body = null;
+        try { body = await res.json(); } catch (e) { /* empty body, e.g. 204 */ }
+        if (!res.ok) return { ok: false, status: res.status, error: (body && body.error) || "Request failed." };
+        return { ok: true, status: res.status, data: body };
+      } catch (e) {
+        return { ok: false, status: 0, error: "Couldn't reach the server." };
+      }
+    }
+
+    /* ---------- sync queue (source of truth is localStorage; this pushes outward to the API) ---------- */
+    const QUEUE_KEY = "mytab_sync_queue_v1";
+    function loadQueue() {
+      try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; }
+      catch (e) { return []; }
+    }
+    function saveQueue(q) {
+      try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch (e) {}
+    }
+    function enqueue(op) {
+      const q = loadQueue();
+      q.push(op);
+      saveQueue(q);
+      updateSyncIndicator();
+      drainQueue();
+    }
+
+    let draining = false;
+    async function drainQueue() {
+      if (draining) return;
+      if (!navigator.onLine || !getToken()) { updateSyncIndicator(); return; }
+      draining = true;
+      let q = loadQueue();
+      while (q.length > 0) {
+        const op = q[0];
+        const ok = await runOp(op);
+        if (!ok) break; // stop on first failure, retry later (offline or transient error)
+        q = loadQueue().slice(1); // reload, since runOp may have rewritten the queue via remapId
+        saveQueue(q);
+        updateSyncIndicator();
+      }
+      draining = false;
+      updateSyncIndicator();
+    }
+
+    async function runOp(op) {
+      try {
+        if (op.type === "create_customer") {
+          const res = await apiFetch("/api/customers", {
+            method: "POST",
+            body: JSON.stringify({ name: op.name, phone: op.phone || undefined, birthday: op.birthday || undefined }),
+          });
+          if (!res.ok) {
+            if (res.status === 402) {
+              // Free-plan limit hit server-side (e.g. synced elsewhere first) — this
+              // customer can never be created without upgrading, so drop it rather
+              // than retrying forever, and remove the phantom local entry.
+              debtors = debtors.filter((d) => d.id !== op.tempId);
+              saveDebtors();
+              flash("Free plan limit reached, upgrade to add more customers.");
+              return true;
+            }
+            throw new Error(res.error);
+          }
+          remapId(op.tempId, res.data.customer.id, "customer");
+          return true;
+        }
+        if (op.type === "update_customer") {
+          const id = resolveId(op.id);
+          const res = await apiFetch(`/api/customers/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ name: op.name, phone: op.phone, birthday: op.birthday || undefined }),
+          });
+          if (!res.ok) throw new Error(res.error);
+          return true;
+        }
+        if (op.type === "delete_customer") {
+          const id = resolveId(op.id);
+          const res = await apiFetch(`/api/customers/${id}`, { method: "DELETE" });
+          if (!res.ok && res.status !== 404) throw new Error(res.error);
+          return true;
+        }
+        if (op.type === "create_debt") {
+          const customerId = resolveId(op.customerId);
+          const res = await apiFetch(`/api/customers/${customerId}/debts`, {
+            method: "POST",
+            body: JSON.stringify({ item: op.item, amount: op.amount, date: op.date }),
+          });
+          if (!res.ok) throw new Error(res.error);
+          remapId(op.tempId, res.data.debt.id, "debt");
+          return true;
+        }
+        if (op.type === "update_debt") {
+          const id = resolveId(op.id);
+          const res = await apiFetch(`/api/debts/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ item: op.item, amount: op.amount }),
+          });
+          if (!res.ok) throw new Error(res.error);
+          return true;
+        }
+        if (op.type === "delete_debt") {
+          const id = resolveId(op.id);
+          const res = await apiFetch(`/api/debts/${id}`, { method: "DELETE" });
+          if (!res.ok && res.status !== 404) throw new Error(res.error);
+          return true;
+        }
+        if (op.type === "add_payment") {
+          const id = resolveId(op.debtId);
+          const res = await apiFetch(`/api/debts/${id}/payments`, {
+            method: "POST",
+            body: JSON.stringify({ amount: op.amount }),
+          });
+          if (!res.ok) throw new Error(res.error);
+          return true;
+        }
+        return true;
+      } catch (e) {
+        console.warn("Sync op failed, will retry:", op.type, e.message || e);
+        return false;
+      }
+    }
+
+    window.addEventListener("online", () => { drainQueue(); refreshFromServerIfIdle(); });
+document.addEventListener("visibilitychange", () => {
+  // Catches the common PWA case: the app was just backgrounded (not fully
+  // closed), so page-load-only refresh logic never re-ran, and another
+  // device may have added data in the meantime.
+  if (document.visibilityState === "visible") {
+    drainQueue();
+    refreshFromServerIfIdle();
+    fetchBillingStatus();
+  }
+});
+    setInterval(drainQueue, 20000); // fallback in case the 'online' event is missed
+    setInterval(() => { refreshFromServerIfIdle(); fetchBillingStatus(); }, 90000); // periodic catch-up, covers two tabs/devices open at once
+    drainQueue(); // attempt on load, in case ops were queued last session while offline
+
+    // Manual refresh: another way to pull the latest data (the automatic refresh stays on).
+    let refreshing = false;
+    async function manualRefresh() {
+      if (refreshing) return;
+      if (!navigator.onLine) { flash("You're offline. Try again when you're back online."); return; }
+      if (!getToken()) return;
+      refreshing = true;
+      const btn = document.getElementById("syncBtn");
+      if (btn) btn.classList.add("sync-btn--spin");
+      try {
+        await drainQueue();
+        if (loadQueue().length > 0) { refreshing = false; flash("Some changes are still sending. Try again in a moment."); return; }
+        const { debtors: pulled, error } = await fetchCustomers();
+        if (error) { refreshing = false; flash("Couldn't refresh. Try again."); return; }
+        debtors = pulled;
+        saveDebtors();
+        fetchBillingStatus();
+        refreshing = false;
+        flash("Up to date");
+      } catch (e) {
+        refreshing = false;
+        flash("Couldn't refresh. Try again.");
+      }
+    }
+
+    function updateSyncIndicator() {
+      const dot = document.getElementById("syncDot");
+      if (!dot) return;
+      const pending = loadQueue().length;
+      if (!navigator.onLine) { dot.className = "sync-dot sync-dot--offline"; dot.title = "Offline, will sync when back online"; }
+      else if (pending > 0) { dot.className = "sync-dot sync-dot--pending"; dot.title = pending + " change(s) waiting to sync"; }
+      else { dot.className = "sync-dot sync-dot--synced"; dot.title = "Synced"; }
+    }
+
+    /* ---------- login / register against the backend ---------- */
+    function classifyIdentifier(raw) {
+      const value = raw.trim();
+      if (!value) return null;
+      if (value.includes("@")) return { column: "email", value: value.toLowerCase() };
+      return { column: "phone", value };
+    }
+
+    async function loginToBackend(identifierValue, pin) {
+      const body = { identifier: identifierValue };
+      if (pin) body.pin = pin;
+      return apiFetch("/auth/login", { method: "POST", body: JSON.stringify(body) });
+    }
+
+    async function registerToBackend({ name, businessType, phone, email, pin }) {
+      return apiFetch("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ name, businessType, phone, email, pin: pin || undefined }),
+      });
+    }
+
+    // Pulls this business's customers + debts (with running balance) down from the API.
+    async function fetchCustomers() {
+      const res = await apiFetch("/api/customers", { method: "GET" });
+      if (!res.ok) {
+        if (res.status === 401) handleAuthExpired();
+        return { error: res.error };
+      }
+      const pulled = (res.data.customers || []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        phone: c.phone || "",
+        birthday: c.birthday || "",
+        entries: (c.entries || []).map((e) => ({
+          id: e.id,
+          item: e.item,
+          amount: Number(e.amount),
+          date: e.date,
+          paidAmount: Number(e.paidAmount || 0),
+          paid: !!e.paid,
+        })),
+      }));
+      return { debtors: pulled };
+    }
+
+    // Quietly pulls fresh data from the server, but only when there's nothing local
+    // still waiting to sync (so we never clobber unsynced local changes).
+    async function refreshFromServerIfIdle() {
+      if (!getToken() || !navigator.onLine) return;
+      if (loadQueue().length > 0) return;
+      const { debtors: pulled, error } = await fetchCustomers();
+      if (error) return;
+      debtors = pulled;
+      saveDebtors();
+      if (stage === "app") render();
+    }
+
+    function handleAuthExpired() {
+      clearSession();
+      stage = "splash";
+      loginIdentifier = ""; loginPin = ""; needsLoginPin = false;
+      loginError = "Your session expired, log in again.";
+      render();
+    }
+
+    /* ---------- storage (offline) ---------- */
+    const STORAGE_KEY = "mytab_debtors_v1";
+    function loadDebtors() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) { /* localStorage unavailable (e.g. this preview), data stays in-memory only */ }
+      return [];
+    }
+    function saveDebtors() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(debtors)); }
+      catch (e) { /* storage unavailable, data stays in-memory only for this session */ }
+    }
+
+    /* ---------- helpers ---------- */
+    const fmt = (n) => "₦" + Number(n).toLocaleString("en-NG", { maximumFractionDigits: 0 });
+    const todayISO = () => new Date().toISOString().slice(0, 10);
+    const daysAgo = (d) => Math.floor((new Date(todayISO()) - new Date(d)) / 86400000);
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    const businessItemsByType = {
+      "Foodstuff & provisions": ["Rice", "Beans", "Oil", "Garri", "Sugar"],
+      "Fashion & tailoring": ["Fabric", "Sewing", "Alteration", "Ready-made wear"],
+      "Electronics & phones": ["Phone", "Charger", "Repair", "Accessories"],
+      "Salon & beauty": ["Hair styling", "Braiding", "Manicure", "Products"],
+      "Building materials & hardware": ["Cement", "Blocks", "Paint", "Tools"],
+      "Pharmacy & chemist": ["Drugs", "Consultation", "Injection", "Supplements"],
+      "Restaurant / food vendor": ["Food pack", "Drinks", "Delivery", "Extra"],
+      "Transport / logistics": ["Fare", "Delivery", "Errand", "Fuel"],
+    };
+    const businessAmountsByType = {
+      "Foodstuff & provisions": [100, 200, 500, 1000, 2000, 5000, 10000],
+      "Fashion & tailoring": [500, 1000, 2000, 5000, 10000, 20000],
+      "Electronics & phones": [1000, 2000, 5000, 10000, 20000, 50000, 100000],
+      "Salon & beauty": [500, 1000, 2000, 3000, 5000, 10000],
+      "Building materials & hardware": [1000, 5000, 10000, 20000, 50000, 100000],
+      "Pharmacy & chemist": [200, 500, 1000, 2000, 5000, 10000],
+      "Restaurant / food vendor": [200, 500, 1000, 1500, 2000, 5000],
+      "Transport / logistics": [100, 200, 500, 1000, 2000, 5000],
+    };
+    const defaultChipAmounts = [100, 200, 500, 1000, 2000, 5000, 10000];
+    function getChipItems() {
+      const type = getBusinessMeta().type;
+      return businessItemsByType[type] || [];
+    }
+    function getChipAmounts() {
+      const type = getBusinessMeta().type;
+      return businessAmountsByType[type] || defaultChipAmounts;
+    }
+
+    function balanceOf(d) { return d.entries.reduce((s, e) => s + (e.amount - e.paidAmount), 0); }
+    function oldestUnpaidDays(d) {
+      const unpaid = d.entries.filter((e) => !e.paid);
+      if (unpaid.length === 0) return 0;
+      return Math.max(...unpaid.map((e) => daysAgo(e.date)));
+    }
+    function status(d) {
+      const bal = balanceOf(d);
+      if (bal === 0) return "green";
+      return oldestUnpaidDays(d) > 14 ? "red" : "yellow";
+    }
+    let audioCtx = null;
+    function beep() {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+      } catch (e) { /* audio unavailable, silently skip */ }
+    }
+    function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 40); } catch (e) {} beep(); }
+
+    const icon = {
+      plus: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+      plusSm: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+      back: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`,
+      search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`,
+      wa: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>`,
+      check: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`,
+      x: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`,
+      trash: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg>`,
+      trashSm: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg>`,
+      pencil: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
+      mic: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>`,
+      install: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>`,
+      settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+    };
+
+    const businessTypes = [
+      "Foodstuff & provisions", "Fashion & tailoring", "Electronics & phones",
+      "Salon & beauty", "Building materials & hardware", "Pharmacy & chemist",
+      "Restaurant / food vendor", "Transport / logistics", "Other",
+    ];
+
+    /* ---------- state ---------- */
+    let debtors = loadDebtors();
+    let tab = "today";
+    let view = "home";
+    let selectedId = null;
+    let query = "";
+    let toastMsg = null, toastTimer = null;
+    let openEntryId = null, openMode = null; // mode: "settle" | "edit" | "delete"
+    let addingEntry = false;
+
+    let newItem = getChipItems()[0] || "Other", newCustomItem = "", newAmount = 0, newCustomAmt = "", listening = false;
+    let editItemVal = "", editAmountVal = 0;
+    let settleCustomAmt = "";
+
+    // Pre-app flow: "splash" -> "login" -> "onboarding" (new business) -> "app"
+    // or straight to "pinlock" -> "app" if this device already has a business set up.
+    let stage = !isOnboarded() ? "splash" : (getBusinessMeta().pin ? "pinlock" : "app");
+    let loginIdentifier = "", loginPin = "", loginError = "", loginBusy = false, needsLoginPin = false;
+    let pendingIdentifier = null; // { column, value }, carried from login into onboarding when no match is found
+    let onbName = "", onbType = businessTypes[0], onbPin = "", onbError = "", onbBusy = false;
+    let pinInput = "", pinError = "";
+    let editingCustomer = false, editCustName = "", editCustPhone = "", editCustBirthday = "";
+    let greetingTemplate = "newmonth", greetingCustomText = "";
+    let upgradeInterval = "monthly", upgradeEmail = "", upgradeError = "", upgradeBusy = false;
+    let settingsPinInput = "", settingsPinError = "", settingsPinBusy = false, manageLinkBusy = false;
+    let reportsData = null, reportsRange = "month", reportsBusy = false, exportBusy = false;
+
+    function flash(msg) {
+      toastMsg = msg; render();
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toastMsg = null; render(); }, 2000);
+    }
+
+    function resetAddForm() { newItem = getChipItems()[0] || "Other"; newCustomItem = ""; newAmount = 0; newCustomAmt = ""; listening = false; }
+
+    /* ---------- actions ---------- */
+    function goHome() { view = "home"; render(); }
+    function openDebtor(id) { selectedId = id; view = "detail"; openEntryId = null; openMode = null; addingEntry = false; editingCustomer = false; render(); }
+    async function goAddDebtor() {
+      if (billingStatus === null && getToken()) await fetchBillingStatus();
+      if (!isPro() && billingStatus && billingStatus.customerLimit != null && debtors.length >= billingStatus.customerLimit) {
+        view = "upgrade"; render(); return;
+      }
+      view = "addDebtor"; render();
+    }
+    async function goGreetings() {
+      if (billingStatus === null && getToken()) await fetchBillingStatus();
+      if (!isPro()) { view = "upgrade"; render(); return; }
+      view = "greetings"; render();
+    }
+    function goUpgrade() { view = "upgrade"; render(); }
+    function goSettings() { settingsPinInput = ""; settingsPinError = ""; view = "settings"; render(); }
+    function goReports() {
+      if (!isPro()) { view = "upgrade"; render(); return; }
+      view = "reports"; render();
+      fetchReports();
+    }
+    async function fetchReports() {
+      reportsBusy = true; render();
+      const res = await apiFetch(`/api/reports/summary?range=${reportsRange}`, { method: "GET" });
+      reportsBusy = false;
+      if (res.ok) reportsData = res.data;
+      else flash(res.error || "Couldn't load reports.");
+      render();
+    }
+    async function handleExportCsv() {
+      exportBusy = true; render();
+      try {
+        const token = getToken();
+        const res = await fetch(API_BASE + "/api/reports/export.csv", { headers: { Authorization: "Bearer " + token } });
+        if (!res.ok) throw new Error("export failed");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "mytab-export.csv";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        flash("Couldn't export, try again.");
+      }
+      exportBusy = false; render();
+    }
+
+    const greetingTemplates = {
+      newmonth: { label: "New month", text: (name) => `Happy new month, ${name}! Thank you for being a valued customer at ${getBusinessMeta().name || "our shop"}. Wishing you a great month ahead. 🎉` },
+      christmas: { label: "Christmas", text: (name) => `Merry Christmas, ${name}! Wishing you and your family a joyful season from all of us at ${getBusinessMeta().name || "the shop"}. 🎄` },
+      newyear: { label: "New year", text: (name) => `Happy new year, ${name}! Thank you for your patronage this past year, here's to an even better one ahead. 🎊` },
+      custom: { label: "Custom", text: () => greetingCustomText },
+    };
+
+    function addDebtor(name, phone, birthday) {
+      const id = crypto.randomUUID();
+      debtors.push({ id, name, phone, birthday: birthday || "", entries: [] });
+      saveDebtors();
+      enqueue({ type: "create_customer", tempId: id, name, phone, birthday });
+      selectedId = id; view = "detail"; render(); buzz(); flash(name + " added");
+    }
+
+    function updateCustomer(id, name, phone, birthday) {
+      const d = debtors.find((x) => x.id === id);
+      d.name = name; d.phone = phone; d.birthday = birthday || "";
+      saveDebtors();
+      enqueue({ type: "update_customer", id, name, phone, birthday });
+      editingCustomer = false; render(); flash("Saved");
+    }
+
+    function addEntry(item, amount) {
+      const d = debtors.find((x) => x.id === selectedId);
+      const id = crypto.randomUUID();
+      const date = todayISO();
+      d.entries.push({ id, item, amount, date, paid: false, paidAmount: 0 });
+      saveDebtors();
+      enqueue({ type: "create_debt", tempId: id, customerId: selectedId, item, amount, date });
+      addingEntry = false; render(); buzz(); flash("Recorded");
+    }
+
+    function editEntry(entryId, item, amount) {
+      const d = debtors.find((x) => x.id === selectedId);
+      const e = d.entries.find((x) => x.id === entryId);
+      e.item = item; e.amount = amount; e.paid = e.paidAmount >= amount;
+      saveDebtors();
+      enqueue({ type: "update_debt", id: entryId, item, amount });
+      openEntryId = null; openMode = null; render(); buzz(); flash("Updated");
+    }
+
+    function deleteEntry(entryId) {
+      const d = debtors.find((x) => x.id === selectedId);
+      d.entries = d.entries.filter((x) => x.id !== entryId);
+      saveDebtors();
+      enqueue({ type: "delete_debt", id: entryId });
+      openEntryId = null; openMode = null; render(); buzz(); flash("Deleted");
+    }
+
+    function settleEntry(entryId, amt) {
+      const d = debtors.find((x) => x.id === selectedId);
+      const e = d.entries.find((x) => x.id === entryId);
+      e.paidAmount = Math.min(e.amount, e.paidAmount + amt);
+      e.paid = e.paidAmount >= e.amount;
+      saveDebtors();
+      enqueue({ type: "add_payment", debtId: entryId, amount: amt });
+      openEntryId = null; openMode = null; render(); buzz(); flash("Payment recorded");
+    }
+
+    function removeDebtor(id) {
+      debtors = debtors.filter((d) => d.id !== id);
+      saveDebtors();
+      enqueue({ type: "delete_customer", id });
+      goHome(); flash("Removed");
+    }
+
+    function openEntryMode(id, mode) { openEntryId = id; openMode = mode; render(); }
+    function closeEntryMode() { openEntryId = null; openMode = null; render(); }
+
+    /* ---------- render ---------- */
+    function render() {
+      const root = document.getElementById("phone");
+      if (stage === "splash") root.innerHTML = renderSplash();
+      else if (stage === "login") root.innerHTML = renderLogin();
+      else if (stage === "onboarding") root.innerHTML = renderOnboarding();
+      else if (stage === "pinlock") root.innerHTML = renderPinlock();
+      else if (view === "home") root.innerHTML = renderHome();
+      else if (view === "detail") root.innerHTML = renderDetail();
+      else if (view === "addDebtor") root.innerHTML = renderAddDebtor();
+      else if (view === "greetings") root.innerHTML = renderGreetings();
+      else if (view === "install") root.innerHTML = renderInstall();
+      else if (view === "upgrade") root.innerHTML = renderUpgrade();
+      else if (view === "settings") root.innerHTML = renderSettings();
+      else if (view === "reports") root.innerHTML = renderReports();
+      else if (view === "sales") root.innerHTML = renderSales();
+      else if (view === "owe") root.innerHTML = renderOwe();
+      else if (view === "oweDetail") root.innerHTML = renderOweDetail();
+      else if (view === "summary") root.innerHTML = renderSummary();
+      const showNav = stage === "app" && BZ_NAV_VIEWS.includes(view);
+      root.classList.toggle("has-nav", showNav);
+      if (showNav) root.innerHTML += bzNav();
+
+      if (stage === "app") root.innerHTML += `<button class="sync-btn" id="syncBtn" aria-label="Refresh"><span class="sync-dot" id="syncDot"></span><span class="sync-ico">↻</span></button>`;
+      if (toastMsg) root.innerHTML += `<div class="toast">${esc(toastMsg)}</div>`;
+      wireEvents();
+      bzWire();
+      const syncBtn = document.getElementById("syncBtn");
+      if (syncBtn) syncBtn.addEventListener("click", manualRefresh);
+      if (stage === "app") updateSyncIndicator();
+    }
+
+    function renderSplash() {
+      return `<div class="screen">
+        <div class="center-screen">
+          <div class="splash-brand">MyTab</div>
+          <div class="splash-tag">put it on your tab</div>
+          <div class="splash-lede">Know who owes you, get paid, and keep your records, even if your phone gets lost.</div>
+        </div>
+        <button class="primary-btn" id="splashContinueBtn">Get started</button>
+      </div>`;
+    }
+
+    function renderLogin() {
+      return `<div class="screen">
+        <div class="center-screen" style="justify-content:flex-start; padding-top:60px;">
+          <div class="splash-brand" style="font-size:24px;">MyTab</div>
+          <div class="splash-tag">put it on your tab</div>
+          <div class="stage-form">
+            <label>Phone number or email
+              <input id="loginIdInput" type="text" placeholder="080… or you@example.com" value="${esc(loginIdentifier)}" ${needsLoginPin ? "disabled" : "autofocus"} />
+            </label>
+            ${needsLoginPin
+              ? `<label>4-digit code
+                  <input id="loginPinInput" type="tel" inputmode="numeric" maxlength="4" placeholder="••••" value="${esc(loginPin)}" autofocus />
+                </label>
+                <div class="stage-hint" id="loginUseDifferent" style="cursor:pointer; text-decoration:underline;">Not you? Use a different number</div>`
+              : `<div class="stage-hint">Already have a MyTab? Enter the same phone or email you used before to bring your data to this device.</div>`}
+            ${loginError ? `<div class="stage-error">${esc(loginError)}</div>` : ""}
+          </div>
+        </div>
+        <button class="primary-btn" id="loginContinueBtn" ${loginBusy ? "disabled" : ""}>${loginBusy ? "Checking…" : "Continue"}</button>
+      </div>`;
+    }
+
+    function renderOnboarding() {
+      return `<div class="screen">
+        <div class="topbar">
+          <div style="width:36px"></div>
+          <div class="topbar-title">Set up your business</div>
+          <div style="width:36px"></div>
+        </div>
+        <div class="stage-form" style="padding:16px 18px;">
+          <label>Business name <input id="onbNameInput" placeholder="e.g. Mama Chioma Stores" value="${esc(onbName)}" /></label>
+          <label>What do you sell or do?
+            <select id="onbTypeInput">
+              ${businessTypes.map((t) => `<option value="${esc(t)}" ${onbType === t ? "selected" : ""}>${esc(t)}</option>`).join("")}
+            </select>
+          </label>
+          <label>4-digit code <span class="optional">(optional, locks the app on this device)</span>
+            <input id="onbPinInput" type="tel" inputmode="numeric" maxlength="4" placeholder="e.g. 1234" value="${esc(onbPin)}" />
+          </label>
+          ${onbError ? `<div class="stage-error">${esc(onbError)}</div>` : ""}
+        </div>
+        <button class="primary-btn" id="onbSaveBtn" ${onbBusy ? "disabled" : ""}>${onbBusy ? "Setting up…" : "Save and continue"}</button>
+      </div>`;
+    }
+
+    function renderPinlock() {
+      const meta = getBusinessMeta();
+      return `<div class="screen">
+        <div class="center-screen">
+          <div class="splash-brand" style="font-size:24px;">MyTab</div>
+          <div class="splash-tag">${meta.name ? esc(meta.name) : "Enter your code"}</div>
+          <div class="stage-form" style="align-items:center;">
+            <input id="pinInput" type="tel" inputmode="numeric" maxlength="4" placeholder="••••" value="${esc(pinInput)}" style="text-align:center; font-size:22px; letter-spacing:8px; width:140px;" autofocus />
+            ${pinError ? `<div class="stage-error">${esc(pinError)}</div>` : ""}
+          </div>
+        </div>
+        <button class="primary-btn" id="pinContinueBtn">Unlock</button>
+      </div>`;
+    }
+
+    function todaysBirthdays() {
+      const mmdd = todayISO().slice(5); // "MM-DD"
+      return debtors.filter((d) => d.birthday && d.birthday.slice(5) === mmdd && d.phone);
+    }
+
+    function overdueDebtors() {
+      return debtors.filter((d) => balanceOf(d) > 0 && oldestUnpaidDays(d) > 14);
+    }
+
+    function renderHome() {
+      const totalOwed = debtors.reduce((s, d) => s + balanceOf(d), 0);
+      const today = [...debtors].filter((d) => balanceOf(d) > 0).sort((a, b) => balanceOf(b) - balanceOf(a));
+      const q = query.trim().toLowerCase();
+      const all = [...(q ? debtors.filter((d) => d.name.toLowerCase().includes(q)) : debtors)].sort((a, b) => balanceOf(b) - balanceOf(a));
+      const birthdaysToday = todaysBirthdays();
+
+      let listHtml = "";
+      if (tab === "today") {
+        listHtml += `<div class="glance-note">Who to collect from, tap a name to open</div>`;
+        if (today.length === 0) listHtml += `<div class="empty"><div class="empty-title">Nobody owes you right now</div></div>`;
+        listHtml += today.map((d) => glanceRow(d, false)).join("");
+      } else {
+        if (all.length === 0) listHtml += `<div class="empty"><div class="empty-title">Nobody on the book yet</div><div class="empty-sub">Tap + to add someone.</div></div>`;
+        listHtml += all.map((d) => glanceRow(d, true)).join("");
+      }
+
+      const birthdayBanner = birthdaysToday.length === 0 ? "" : `
+        <div class="balance-card" style="margin:14px 18px 0; text-align:left;">
+          <div class="balance-label">🎂 Birthday today</div>
+          ${birthdaysToday.map((d) => {
+            const waLink = `https://wa.me/234${d.phone.replace(/^0/, "")}?text=${encodeURIComponent(`Happy birthday, ${d.name}! 🎉 Wishing you a wonderful day from all of us at ${getBusinessMeta().name || "the shop"}.`)}`;
+            return `<div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px;">
+              <span style="font-weight:700; font-size:14px;">${esc(d.name)}</span>
+              <a class="wa-btn" style="margin-top:0;" href="${waLink}" target="_blank" rel="noreferrer">${icon.wa} Send</a>
+            </div>`;
+          }).join("")}
+        </div>`;
+
+      const nearLimit = billingStatus && !isPro() && billingStatus.customerLimit != null
+        && billingStatus.customerCount >= billingStatus.customerLimit - 2;
+      const upgradeBanner = !nearLimit ? "" : `
+        <button id="homeUpgradeBanner" style="display:block; width:calc(100% - 36px); margin:14px 18px 0; text-align:left; border:1px solid var(--accent); background:var(--yellow-bg); border-radius:12px; padding:12px 14px; font-family:inherit; cursor:pointer;">
+          <div style="font-weight:700; font-size:13.5px; color:var(--yellow);">${billingStatus.customerCount}/${billingStatus.customerLimit} free customers used</div>
+          <div style="font-size:12.5px; color:var(--ink-soft); margin-top:2px;">Tap to upgrade to Pro for unlimited customers</div>
+        </button>`;
+
+      const overdue = overdueDebtors();
+      const overdueBanner = overdue.length === 0 ? "" : `
+        <button id="homeOverdueBanner" style="display:block; width:calc(100% - 36px); margin:14px 18px 0; text-align:left; border:1px solid var(--red); background:var(--red-bg); border-radius:12px; padding:12px 14px; font-family:inherit; cursor:pointer;">
+          <div style="font-weight:700; font-size:13.5px; color:var(--red);">${overdue.length} customer${overdue.length === 1 ? "" : "s"} overdue 14+ days</div>
+          <div style="font-size:12.5px; color:var(--ink-soft); margin-top:2px;">Tap to see who, and send a reminder</div>
+        </button>`;
+
+      return `
+        <div class="screen">
+          <div class="hero" style="position:relative;">
+            <div class="brand-name">MyTab <span class="beta-chip">BETA</span></div>
+            <div class="hero-label">Total owed to you</div>
+            <div class="hero-amount">${fmt(totalOwed)}</div>
+            ${bzOweHint()}
+            <button class="iconbtn" id="greetingsBtn" style="position:absolute; top:20px; right:18px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.wa}</button>
+            ${!isStandalone() ? `<button class="iconbtn" id="installBtn" style="position:absolute; top:20px; right:64px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.install}</button>` : ""}
+            <button class="iconbtn" id="settingsBtn" style="position:absolute; top:20px; right:${isStandalone() ? "64" : "110"}px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.settings}</button>
+          </div>
+          ${birthdayBanner}
+          ${overdueBanner}
+          ${upgradeBanner}
+          <div class="tabs">
+            <button class="tab${tab === "today" ? " tab--active" : ""}" data-tab="today">Today</button>
+            <button class="tab${tab === "all" ? " tab--active" : ""}" data-tab="all">All</button>
+          </div>
+          ${tab === "all" ? `<div class="searchbar">${icon.search}<input id="searchInput" placeholder="Search a name…" value="${esc(query)}" /></div>` : ""}
+          <div class="list">${listHtml}</div>
+          <button class="fab" id="addDebtorBtn">${icon.plus}</button>
+        </div>`;
+    }
+
+    function glanceRow(d, showSettled) {
+      const bal = balanceOf(d);
+      if (bal === 0 && !showSettled) return "";
+      const cls = bal === 0 ? "green" : status(d);
+      return `<button class="grow grow--${cls}" data-open="${d.id}">
+        <span class="grow-dot"></span>
+        <span class="grow-name">${esc(d.name)}</span>
+        <span class="grow-amount">${bal === 0 ? "Settled" : fmt(bal)}</span>
+      </button>`;
+    }
+
+    function renderDetail() {
+      const d = debtors.find((x) => x.id === selectedId);
+      const bal = balanceOf(d);
+      const waLink = d.phone
+        ? `https://wa.me/234${d.phone.replace(/^0/, "")}?text=${encodeURIComponent(`Hi ${d.name}, reminder, you currently owe ${fmt(bal)}. Thank you!`)}`
+        : null;
+
+      const entries = [...d.entries].sort((a, b) => (a.date < b.date ? 1 : -1)).map((e) => entryHtml(e)).join("");
+
+      return `
+        <div class="screen">
+          <div class="topbar">
+            <button class="iconbtn" id="backBtn">${icon.back}</button>
+            <div class="topbar-title">${esc(d.name)}</div>
+            <div style="display:flex; gap:6px;">
+              <button class="iconbtn" id="editCustomerBtn">${icon.pencil}</button>
+              <button class="iconbtn iconbtn--danger" id="removeDebtorBtn">${icon.trash}</button>
+            </div>
+          </div>
+          ${editingCustomer ? editCustomerHtml(d) : ""}
+          <div class="balance-card">
+            <div class="balance-label">Balance owed</div>
+            <div class="balance-amount${bal === 0 ? " balance-amount--clear" : ""}">${fmt(bal)}</div>
+            ${waLink ? `<a class="wa-btn" href="${waLink}" target="_blank" rel="noreferrer">${icon.wa} Send reminder</a>` : ""}
+            ${d.birthday ? `<div class="stage-hint" style="margin-top:8px;">🎂 Birthday: ${esc(d.birthday)}</div>` : ""}
+          </div>
+          <div class="entries">${entries}</div>
+          ${!addingEntry
+            ? `<button class="primary-btn" id="addEntryBtn">${icon.plusSm} Add new debt</button>`
+            : quickAddHtml()}
+        </div>`;
+    }
+
+    function entryHtml(e) {
+      const remaining = e.amount - e.paidAmount;
+      const isOpen = openEntryId === e.id;
+      const tag = e.paid ? `<div class="tag tag--paid">${icon.check} Paid</div>`
+        : e.paidAmount > 0 ? `<div class="tag tag--partial">${fmt(remaining)} left</div>`
+        : `<div class="tag tag--unpaid">Unpaid</div>`;
+
+      let panel = "";
+      if (isOpen && openMode === "settle" && !e.paid) {
+        panel = `<div class="settle-form">
+          <div class="quick-row">${getChipAmounts().filter((a) => a <= remaining).slice(0, 4).map((a) => `<button class="chip" data-settle="${e.id}" data-amt="${a}">${fmt(a)}</button>`).join("")}</div>
+          <div class="custom-row">
+            <span class="custom-prefix">₦</span>
+            <input type="number" id="settleCustom-${e.id}" class="custom-input" placeholder="Enter amount (up to ${fmt(remaining)})" value="${settleCustomAmt}" />
+            <button class="custom-go" data-settle-custom="${e.id}" data-remaining="${remaining}">Record</button>
+          </div>
+          <div class="settle-actions">
+            <button class="ghost-btn" data-close-entry="1">${icon.x} Cancel</button>
+            <button class="settle-full" data-settle="${e.id}" data-amt="${remaining}">Mark fully paid</button>
+          </div>
+        </div>`;
+      } else if (isOpen && openMode === "edit") {
+        panel = `<div class="settle-form">
+          <input class="plain-input" id="editItem-${e.id}" value="${esc(editItemVal)}" placeholder="Item" />
+          <div class="custom-row">
+            <span class="custom-prefix">₦</span>
+            <input type="number" id="editAmount-${e.id}" class="custom-input" value="${editAmountVal}" />
+          </div>
+          <div class="settle-actions">
+            <button class="ghost-btn" data-close-entry="1">${icon.x} Cancel</button>
+            <button class="settle-btn" data-save-edit="${e.id}">Save changes</button>
+          </div>
+        </div>`;
+      } else if (isOpen && openMode === "delete") {
+        panel = `<div class="settle-form">
+          <div class="delete-confirm-text">Delete "${esc(e.item)}" (${fmt(e.amount)})? This can't be undone.</div>
+          <div class="settle-actions">
+            <button class="ghost-btn" data-close-entry="1">${icon.x} Cancel</button>
+            <button class="settle-btn settle-btn--danger" data-delete-entry="${e.id}">Delete</button>
+          </div>
+        </div>`;
+      }
+
+      return `<div class="entry">
+        <div class="entry-row" data-toggle-settle="${!e.paid ? e.id : ""}">
+          <div class="entry-main">
+            <div class="entry-item">${esc(e.item)}</div>
+            <div class="entry-date">${e.date}</div>
+          </div>
+          <div class="entry-right">
+            <div class="entry-amount${e.paid ? " entry-amount--paid" : ""}">${fmt(e.amount)}</div>
+            ${tag}
+          </div>
+          <div class="entry-icons">
+            <button class="entry-icon-btn" data-edit-entry="${e.id}">${icon.pencil}</button>
+            <button class="entry-icon-btn entry-icon-btn--danger" data-delete-mode="${e.id}">${icon.trashSm}</button>
+          </div>
+        </div>
+        ${panel}
+      </div>`;
+    }
+
+    function editCustomerHtml(d) {
+      return `<div class="form" style="padding:10px 18px 4px;">
+        <label>Name <input id="editCustNameInput" value="${esc(editCustName)}" /></label>
+        <label>Phone <span class="optional">(optional)</span> <input id="editCustPhoneInput" value="${esc(editCustPhone)}" placeholder="080…" /></label>
+        <label>Birthday <span class="optional">(optional)</span> <input id="editCustBirthdayInput" type="date" value="${esc(editCustBirthday)}" /></label>
+        <div class="settle-actions">
+          <button class="ghost-btn" id="cancelEditCustBtn">${icon.x} Cancel</button>
+          <button class="settle-btn" id="saveEditCustBtn">Save</button>
+        </div>
+      </div>`;
+    }
+
+    function quickAddHtml() {
+      const finalItem = newItem === "Other" ? newCustomItem : newItem;
+      const valid = finalItem.trim() && newAmount > 0;
+      return `<div class="quickadd">
+        <div class="quickadd-label">Item</div>
+        <div class="quick-row">
+          ${getChipItems().map((it) => `<button class="chip${newItem === it ? " chip--active" : ""}" data-item="${it}">${it}</button>`).join("")}
+          <button class="chip${newItem === "Other" ? " chip--active" : ""}" data-item="Other">Other</button>
+        </div>
+        ${newItem === "Other" ? `<input class="plain-input" id="customItemInput" placeholder="What was it?" value="${esc(newCustomItem)}" />` : ""}
+
+        <div class="quickadd-label">Amount</div>
+        <div class="amount-display">${newAmount > 0 ? fmt(newAmount) : "₦0"}</div>
+        <div class="quick-row">
+          ${getChipAmounts().map((a) => `<button class="chip" data-add-amt="${a}">+${fmt(a)}</button>`).join("")}
+          <button class="chip chip--ghost" id="resetAmtBtn">Reset</button>
+          <button class="chip chip--mic${listening ? " chip--listening" : ""}" id="micBtn">${icon.mic} ${listening ? "Listening…" : "Voice"}</button>
+        </div>
+        <div class="custom-row">
+          <span class="custom-prefix">₦</span>
+          <input type="number" id="customAmtInput" class="custom-input" placeholder="Or type the exact amount" value="${newAmount > 0 ? newAmount : ""}" />
+        </div>
+
+        <div class="settle-actions" style="margin-top:2px">
+          <button class="ghost-btn" id="cancelAddBtn">${icon.x} Cancel</button>
+          <button class="settle-btn" id="saveEntryBtn" ${valid ? "" : "disabled"}>Save debt</button>
+        </div>
+      </div>`;
+    }
+
+    function renderGreetings() {
+      const withPhone = debtors.filter((d) => d.phone);
+      const tpl = greetingTemplates[greetingTemplate];
+      const previewOk = greetingTemplate !== "custom" || greetingCustomText.trim();
+
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="greetingsBackBtn">${icon.back}</button>
+          <div class="topbar-title">Send a greeting</div>
+          <div style="width:36px"></div>
+        </div>
+        <div class="form" style="padding-bottom:8px; flex:0;">
+          <div class="quickadd-label">Message</div>
+          <div class="quick-row">
+            ${Object.entries(greetingTemplates).map(([key, t]) => `<button class="chip${greetingTemplate === key ? " chip--active" : ""}" data-greeting-template="${key}">${t.label}</button>`).join("")}
+          </div>
+          ${greetingTemplate === "custom" ? `<textarea id="greetingCustomInput" class="plain-input" rows="3" placeholder="Type your message… (each customer's name isn't auto-inserted, write it generally)">${esc(greetingCustomText)}</textarea>` : `<div class="stage-hint">Preview: "${esc(tpl.text("[Name]"))}"</div>`}
+        </div>
+        <div class="entries" style="flex:1;">
+          ${withPhone.length === 0 ? `<div class="empty"><div class="empty-title">No customers with a phone number yet</div><div class="empty-sub">Add a phone number to a customer to send them greetings.</div></div>` : ""}
+          ${withPhone.map((d) => {
+            const msg = greetingTemplates[greetingTemplate].text(d.name);
+            const waLink = `https://wa.me/234${d.phone.replace(/^0/, "")}?text=${encodeURIComponent(msg)}`;
+            return `<div class="entry-row">
+              <div class="entry-main"><div class="entry-item">${esc(d.name)}</div></div>
+              <a class="wa-btn" style="margin-top:0; ${previewOk ? "" : "opacity:0.4; pointer-events:none;"}" href="${waLink}" target="_blank" rel="noreferrer">${icon.wa} Send</a>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>`;
+    }
+
+    function renderInstall() {
+      const ua = navigator.userAgent || "";
+      const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const isAndroid = /android/i.test(ua);
+      let steps;
+      if (isIOS) {
+        steps = [
+          "Tap the Share icon (square with an arrow pointing up) at the bottom of Safari.",
+          "Scroll down the share menu and tap \"Add to Home Screen\".",
+          "Tap \"Add\" in the top right corner.",
+        ];
+      } else if (isAndroid) {
+        steps = [
+          "Tap the ⋮ menu (three dots) in the top right of Chrome.",
+          "Tap \"Add to Home screen\" or \"Install app\".",
+          "Confirm by tapping \"Install\" or \"Add\".",
+        ];
+      } else {
+        steps = [
+          "Open this page on your phone's browser (Safari on iPhone, Chrome on Android).",
+          "Use that browser's menu to add MyTab to your home screen.",
+        ];
+      }
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="installBackBtn">${icon.back}</button>
+          <div class="topbar-title">Add to Home Screen</div>
+          <div style="width:36px"></div>
+        </div>
+        <div class="center-screen" style="padding-top:20px;">
+          <div class="splash-brand" style="font-size:22px;">Get MyTab on your home screen</div>
+          <div class="splash-lede" style="max-width:320px;">Add MyTab like a real app, one tap to open, no browser bar, works offline.</div>
+          <div class="stage-form" style="text-align:left; margin-top:22px; gap:18px;">
+            ${steps.map((s, i) => `<div style="display:flex; gap:10px; align-items:flex-start;">
+              <div style="flex-shrink:0; width:24px; height:24px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">${i + 1}</div>
+              <div style="font-size:14px; color:var(--ink); line-height:1.5; padding-top:2px;">${esc(s)}</div>
+            </div>`).join("")}
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function renderUpgrade() {
+      const usedLine = billingStatus && billingStatus.customerLimit != null
+        ? `You're using ${billingStatus.customerCount} of ${billingStatus.customerLimit} free customers.`
+        : "";
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="upgradeBackBtn">${icon.back}</button>
+          <div class="topbar-title">MyTab Pro</div>
+          <div style="width:36px"></div>
+        </div>
+        <div style="padding:22px 18px 0; flex:1; overflow-y:auto;">
+          <div class="splash-brand" style="font-size:22px;">Upgrade to Pro</div>
+          ${usedLine ? `<div class="stage-hint" style="margin-top:6px;">${esc(usedLine)}</div>` : ""}
+          <div class="stage-form" style="margin-top:18px; gap:10px;">
+            <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Unlimited customers, no cap</span></div>
+            <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Birthday & seasonal greetings</span></div>
+            <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Sales charts: what sells more, today vs yesterday, top customers</span></div>
+            <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Everything new we add to Pro later</span></div>
+          </div>
+
+          <div class="quick-row" style="margin-top:20px;">
+            <button class="chip${upgradeInterval === "monthly" ? " chip--active" : ""}" data-interval="monthly">₦1,000 / month</button>
+            <button class="chip${upgradeInterval === "annual" ? " chip--active" : ""}" data-interval="annual">₦10,000 / year</button>
+          </div>
+
+          <div class="stage-form" style="margin-top:16px;">
+            <label>Email <span class="optional">(for your payment receipt)</span>
+              <input id="upgradeEmailInput" type="email" placeholder="you@example.com" value="${esc(upgradeEmail)}" />
+            </label>
+            ${upgradeError ? `<div class="stage-error">${esc(upgradeError)}</div>` : ""}
+          </div>
+        </div>
+        <button class="primary-btn" id="upgradeSubscribeBtn" ${upgradeBusy ? "disabled" : ""}>${upgradeBusy ? "Starting checkout…" : "Continue to payment"}</button>
+        <button class="ghost-btn" id="upgradeRefreshBtn" style="margin:0 18px 18px;">Already paid? Refresh status</button>
+      </div>`;
+    }
+
+    function renderSettings() {
+      const meta = getBusinessMeta();
+      const planLabel = isPro() ? "Pro" : "Free";
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="settingsBackBtn">${icon.back}</button>
+          <div class="topbar-title">Settings</div>
+          <div style="width:36px"></div>
+        </div>
+        <div style="padding:20px 18px; flex:1; overflow-y:auto;">
+          <div class="quickadd-label">Business</div>
+          <div class="balance-card" style="margin:8px 0 20px; text-align:left;">
+            <div style="font-weight:700; font-size:15.5px;">${esc(meta.name || "")}</div>
+            <div style="font-size:13px; color:var(--ink-soft); margin-top:2px;">${esc(meta.identifier || "")}</div>
+          </div>
+
+          <div class="quickadd-label">Plan</div>
+          <div class="balance-card" style="margin:8px 0 20px; text-align:left;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <span style="font-weight:700; font-size:15.5px;">MyTab ${planLabel}</span>
+              ${billingStatus && billingStatus.customerLimit != null ? `<span style="font-size:12.5px; color:var(--ink-soft);">${billingStatus.customerCount}/${billingStatus.customerLimit} customers</span>` : ""}
+            </div>
+            ${isPro()
+              ? `<button class="ghost-btn" id="manageSubBtn" style="margin-top:12px; width:100%; justify-content:center;" ${manageLinkBusy ? "disabled" : ""}>${manageLinkBusy ? "Loading…" : "Manage subscription"}</button>`
+              : `<button class="settle-btn" id="settingsUpgradeBtn" style="margin-top:12px; width:100%;">Upgrade to Pro</button>`}
+          </div>
+
+          <div class="quickadd-label">Reports & export</div>
+          <div class="balance-card" style="margin:8px 0 20px; text-align:left;">
+            ${isPro()
+              ? `<button class="settle-btn" id="goReportsBtn" style="width:100%;">View reports & export CSV</button>`
+              : `<div style="font-size:13px; color:var(--ink-soft); margin-bottom:10px;">See weekly/monthly totals and export your full customer ledger as a spreadsheet.</div><button class="settle-btn" id="reportsUpgradeBtn" style="width:100%;">Unlock with Pro</button>`}
+          </div>
+
+          ${bzSettingsCard()}
+
+          <div class="quickadd-label">App lock</div>
+          <div class="stage-form" style="margin:8px 0 20px;">
+            <label>${meta.pin ? "Change 4-digit code" : "Set a 4-digit code"} <span class="optional">(locks the app on this device)</span>
+              <input id="settingsPinInput" type="tel" inputmode="numeric" maxlength="4" placeholder="e.g. 1234" value="${esc(settingsPinInput)}" />
+            </label>
+            ${settingsPinError ? `<div class="stage-error">${esc(settingsPinError)}</div>` : ""}
+            <div class="settle-actions">
+              <button class="settle-btn" id="savePinBtn" ${settingsPinBusy ? "disabled" : ""}>${settingsPinBusy ? "Saving…" : "Save code"}</button>
+              ${meta.pin ? `<button class="ghost-btn" id="removePinBtn" ${settingsPinBusy ? "disabled" : ""}>Remove code</button>` : ""}
+            </div>
+          </div>
+
+          <button class="ghost-btn" id="logoutBtn" style="width:100%; justify-content:center; color:var(--red); border-color:var(--red-bg);">Log out</button>
+        </div>
+      </div>`;
+    }
+
+    function renderReports() {
+      const d = reportsData;
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="reportsBackBtn">${icon.back}</button>
+          <div class="topbar-title">Reports</div>
+          <div style="width:36px"></div>
+        </div>
+        <div style="padding:16px 18px; flex:1; overflow-y:auto;">
+          <div class="quick-row">
+            <button class="chip${reportsRange === "week" ? " chip--active" : ""}" data-range="week">This week</button>
+            <button class="chip${reportsRange === "month" ? " chip--active" : ""}" data-range="month">This month</button>
+            <button class="chip${reportsRange === "all" ? " chip--active" : ""}" data-range="all">All time</button>
+          </div>
+
+          ${reportsBusy && !d ? `<div class="empty"><div class="empty-title">Loading…</div></div>` : ""}
+          ${d ? `
+            <div class="balance-card" style="margin:16px 0 12px; text-align:left;">
+              <div class="balance-label">Collected (${esc(reportsRange === "all" ? "all time" : reportsRange === "week" ? "this week" : "this month")})</div>
+              <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:26px; color:var(--green);">${fmt(d.totalCollected)}</div>
+              <div class="stage-hint" style="margin-top:2px;">${d.paymentsCount} payment${d.paymentsCount === 1 ? "" : "s"} recorded</div>
+            </div>
+            <div class="balance-card" style="margin-bottom:12px; text-align:left;">
+              <div class="balance-label">Still outstanding</div>
+              <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:26px; color:var(--red);">${fmt(d.totalOutstanding)}</div>
+              <div class="stage-hint" style="margin-top:2px;">Across all unpaid customers, all time</div>
+            </div>
+            <div class="balance-card" style="margin-bottom:12px; text-align:left;">
+              <div class="balance-label">New debt recorded (${esc(reportsRange === "all" ? "all time" : reportsRange === "week" ? "this week" : "this month")})</div>
+              <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:20px;">${fmt(d.newDebtsAmount)}</div>
+              <div class="stage-hint" style="margin-top:2px;">${d.newDebtsCount} new entr${d.newDebtsCount === 1 ? "y" : "ies"}</div>
+            </div>
+            ${d.topOwing.length > 0 ? `
+              <div class="quickadd-label" style="margin-top:6px;">Owes you the most</div>
+              <div class="balance-card" style="margin-top:8px; text-align:left;">
+                ${d.topOwing.map((c, i) => `<div style="display:flex; justify-content:space-between; padding:${i === 0 ? "0" : "8px"} 0 0;">
+                  <span style="font-size:14px; font-weight:600;">${esc(c.name)}</span>
+                  <span style="font-size:14px; font-weight:700; color:var(--red);">${fmt(c.balance)}</span>
+                </div>`).join("")}
+              </div>` : ""}
+          ` : ""}
+
+          <button class="ghost-btn" id="exportCsvBtn" style="width:100%; justify-content:center; margin-top:20px;" ${exportBusy ? "disabled" : ""}>${exportBusy ? "Preparing…" : "Export full ledger as CSV"}</button>
+        </div>
+      </div>`;
+    }
+
+    function renderAddDebtor() {
+      return `<div class="screen">
+        <div class="topbar">
+          <button class="iconbtn" id="cancelDebtorBtn">${icon.back}</button>
+          <div class="topbar-title">Add person</div>
+          <div style="width:36px"></div>
+        </div>
+        <div class="form">
+          <label>Name <input id="nameInput" placeholder="e.g. Chioma" /></label>
+          <label>Phone <span class="optional">(optional)</span> <input id="phoneInput" placeholder="080…" /></label>
+          <label>Birthday <span class="optional">(optional, for birthday greetings)</span> <input id="birthdayInput" type="date" /></label>
+        </div>
+        <button class="primary-btn" id="saveDebtorBtn" disabled>Save</button>
+      </div>`;
+    }
+
+    /* ---------- events ---------- */
+    async function handleLoginContinue() {
+      loginError = "";
+      const identifier = classifyIdentifier(loginIdentifier);
+      if (!identifier) { loginError = "Enter a phone number or email."; render(); return; }
+
+      if (!navigator.onLine) {
+        loginError = "You need an internet connection the first time you set up MyTab on a device. Connect and try again.";
+        render();
+        return;
+      }
+
+      loginBusy = true; render();
+
+      const res = await loginToBackend(identifier.value, needsLoginPin ? loginPin : undefined);
+      loginBusy = false;
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          needsLoginPin = true;
+          loginError = loginPin ? "Incorrect PIN." : "This business is PIN-protected. Enter the PIN.";
+          render();
+          return;
+        }
+        if (res.status === 404) {
+          pendingIdentifier = identifier;
+          stage = "onboarding";
+          render();
+          return;
+        }
+        loginError = res.error || "Couldn't reach the server, try again.";
+        render();
+        return;
+      }
+
+      const { token, business } = res.data;
+      setToken(token);
+      BUSINESS_ID = business.id;
+      setBusinessId(BUSINESS_ID);
+      setBusinessMeta({ name: business.name, identifier: identifier.value, type: business.business_type || "", pin: needsLoginPin ? loginPin : "" });
+      markOnboarded();
+
+      const { debtors: pulled, error: pullErr } = await fetchCustomers();
+      debtors = pulled || [];
+      saveDebtors();
+      if (pullErr) flash("Logged in, but couldn't load your data yet.");
+      await fetchBillingStatus();
+
+      stage = business.has_pin ? "pinlock" : "app";
+      pinInput = "";
+      render();
+    }
+
+    async function handleOnboardingSave() {
+      onbError = "";
+      if (!onbName.trim()) { onbError = "Enter a business name."; render(); return; }
+      if (onbPin && !/^\d{4}$/.test(onbPin)) { onbError = "The code should be exactly 4 digits, or left blank."; render(); return; }
+
+      if (!navigator.onLine) {
+        onbError = "You need an internet connection to set up your business the first time. Connect and try again.";
+        render();
+        return;
+      }
+
+      onbBusy = true; render();
+
+      const identifier = pendingIdentifier || { column: "phone", value: "" };
+      const res = await registerToBackend({
+        name: onbName.trim(),
+        businessType: onbType,
+        phone: identifier.column === "phone" ? identifier.value : undefined,
+        email: identifier.column === "email" ? identifier.value : undefined,
+        pin: onbPin || undefined,
+      });
+
+      onbBusy = false;
+
+      if (!res.ok) {
+        onbError = res.error || "Couldn't set up your business, try again.";
+        render();
+        return;
+      }
+
+      const { token, business } = res.data;
+      setToken(token);
+      BUSINESS_ID = business.id;
+      setBusinessId(BUSINESS_ID);
+      setBusinessMeta({ name: business.name, identifier: identifier.value, type: onbType, pin: onbPin || "" });
+      markOnboarded();
+      debtors = [];
+      saveDebtors();
+      await fetchBillingStatus();
+
+      stage = "app";
+      render();
+    }
+
+    async function handleUpgradeSubscribe() {
+      upgradeError = "";
+      if (!upgradeEmail || !upgradeEmail.includes("@")) {
+        upgradeError = "Enter a valid email to continue.";
+        render();
+        return;
+      }
+      upgradeBusy = true; render();
+
+      const res = await apiFetch("/billing/subscribe", {
+        method: "POST",
+        body: JSON.stringify({ interval: upgradeInterval, email: upgradeEmail }),
+      });
+
+      upgradeBusy = false;
+
+      if (!res.ok) {
+        upgradeError = res.error || "Couldn't start checkout, try again.";
+        render();
+        return;
+      }
+
+      window.location.href = res.data.authorizationUrl;
+    }
+
+    async function handleUpgradeRefresh() {
+      upgradeBusy = true; render();
+      await fetchBillingStatus();
+      upgradeBusy = false;
+      if (isPro()) {
+        flash("You're on Pro now!");
+        view = "home";
+      }
+      render();
+    }
+
+    async function handleManageSubscription() {
+      manageLinkBusy = true; render();
+      let res = await apiFetch("/billing/manage-link", { method: "GET" });
+      if (!res.ok && res.status === 0) {
+        flash("Waking up the server, trying again…");
+        await new Promise((r) => setTimeout(r, 4000));
+        res = await apiFetch("/billing/manage-link", { method: "GET" });
+      }
+      manageLinkBusy = false;
+      if (!res.ok) { flash(res.error || "Couldn't open management page, try again in a moment."); render(); return; }
+      window.open(res.data.link, "_blank");
+      render();
+    }
+
+    async function handleSavePin() {
+      settingsPinError = "";
+      if (!/^\d{4}$/.test(settingsPinInput)) {
+        settingsPinError = "Enter exactly 4 digits.";
+        render();
+        return;
+      }
+      settingsPinBusy = true; render();
+      const res = await apiFetch("/auth/set-pin", { method: "POST", body: JSON.stringify({ pin: settingsPinInput }) });
+      settingsPinBusy = false;
+      if (!res.ok) { settingsPinError = res.error || "Couldn't save, try again."; render(); return; }
+      const meta = getBusinessMeta();
+      setBusinessMeta({ ...meta, pin: settingsPinInput });
+      settingsPinInput = "";
+      flash("Code saved");
+      render();
+    }
+
+    async function handleRemovePin() {
+      settingsPinBusy = true; render();
+      const res = await apiFetch("/auth/set-pin", { method: "POST", body: JSON.stringify({ pin: "" }) });
+      settingsPinBusy = false;
+      if (!res.ok) { settingsPinError = res.error || "Couldn't remove, try again."; render(); return; }
+      const meta = getBusinessMeta();
+      setBusinessMeta({ ...meta, pin: "" });
+      flash("Code removed");
+      render();
+    }
+
+    function handleLogout() {
+      clearSession();
+      debtors = [];
+      billingStatus = null;
+      reportsData = null;
+      stage = "splash";
+      view = "home";
+      loginIdentifier = ""; loginPin = ""; needsLoginPin = false; loginError = "";
+      render();
+    }
+
+    function handlePinContinue() {
+      const meta = getBusinessMeta();
+      if (pinInput === meta.pin) {
+        pinError = "";
+        stage = "app";
+        render();
+        refreshFromServerIfIdle();
+        fetchBillingStatus();
+      } else {
+        pinError = "That code doesn't match, try again.";
+        pinInput = "";
+        render();
+      }
+    }
+
+    function wireEvents() {
+      const root = document.getElementById("phone");
+
+      const splashContinueBtn = document.getElementById("splashContinueBtn");
+      if (splashContinueBtn) splashContinueBtn.addEventListener("click", () => { stage = "login"; render(); });
+
+      const loginIdInput = document.getElementById("loginIdInput");
+      if (loginIdInput) loginIdInput.addEventListener("input", (e) => { loginIdentifier = e.target.value; });
+      const loginPinInput = document.getElementById("loginPinInput");
+      if (loginPinInput) loginPinInput.addEventListener("input", (e) => { loginPin = e.target.value.replace(/\D/g, "").slice(0, 4); });
+      const loginUseDifferent = document.getElementById("loginUseDifferent");
+      if (loginUseDifferent) loginUseDifferent.addEventListener("click", () => { needsLoginPin = false; loginPin = ""; loginIdentifier = ""; loginError = ""; render(); });
+      const loginContinueBtn = document.getElementById("loginContinueBtn");
+      if (loginContinueBtn) loginContinueBtn.addEventListener("click", handleLoginContinue);
+
+      const onbNameInput = document.getElementById("onbNameInput");
+      if (onbNameInput) onbNameInput.addEventListener("input", (e) => { onbName = e.target.value; });
+      const onbTypeInput = document.getElementById("onbTypeInput");
+      if (onbTypeInput) onbTypeInput.addEventListener("change", (e) => { onbType = e.target.value; });
+      const onbPinInput = document.getElementById("onbPinInput");
+      if (onbPinInput) onbPinInput.addEventListener("input", (e) => { onbPin = e.target.value.replace(/\D/g, "").slice(0, 4); });
+      const onbSaveBtn = document.getElementById("onbSaveBtn");
+      if (onbSaveBtn) onbSaveBtn.addEventListener("click", handleOnboardingSave);
+
+      const pinInputEl = document.getElementById("pinInput");
+      if (pinInputEl) pinInputEl.addEventListener("input", (e) => { pinInput = e.target.value.replace(/\D/g, "").slice(0, 4); });
+      const pinContinueBtn = document.getElementById("pinContinueBtn");
+      if (pinContinueBtn) pinContinueBtn.addEventListener("click", handlePinContinue);
+
+      root.querySelectorAll("[data-tab]").forEach((el) => el.addEventListener("click", () => { tab = el.dataset.tab; render(); }));
+      const searchInput = document.getElementById("searchInput");
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          query = e.target.value;
+          const caret = e.target.selectionStart;
+          render();
+          const again = document.getElementById("searchInput");
+          if (again) { again.focus(); again.setSelectionRange(caret, caret); }
+        });
+      }
+      root.querySelectorAll("[data-open]").forEach((el) => el.addEventListener("click", () => openDebtor(el.dataset.open)));
+      const addDebtorBtn = document.getElementById("addDebtorBtn");
+      if (addDebtorBtn) addDebtorBtn.addEventListener("click", goAddDebtor);
+      const greetingsBtn = document.getElementById("greetingsBtn");
+      if (greetingsBtn) greetingsBtn.addEventListener("click", goGreetings);
+      const homeUpgradeBanner = document.getElementById("homeUpgradeBanner");
+      if (homeUpgradeBanner) homeUpgradeBanner.addEventListener("click", goUpgrade);
+      const homeOverdueBanner = document.getElementById("homeOverdueBanner");
+      if (homeOverdueBanner) homeOverdueBanner.addEventListener("click", () => { tab = "today"; render(); });
+      const settingsBtn = document.getElementById("settingsBtn");
+      if (settingsBtn) settingsBtn.addEventListener("click", goSettings);
+
+      const settingsBackBtn = document.getElementById("settingsBackBtn");
+      if (settingsBackBtn) settingsBackBtn.addEventListener("click", goHome);
+      const settingsUpgradeBtn = document.getElementById("settingsUpgradeBtn");
+      if (settingsUpgradeBtn) settingsUpgradeBtn.addEventListener("click", goUpgrade);
+      const manageSubBtn = document.getElementById("manageSubBtn");
+      if (manageSubBtn) manageSubBtn.addEventListener("click", handleManageSubscription);
+      const settingsPinInputEl = document.getElementById("settingsPinInput");
+      if (settingsPinInputEl) settingsPinInputEl.addEventListener("input", (e) => { settingsPinInput = e.target.value.replace(/\D/g, "").slice(0, 4); });
+      const savePinBtn = document.getElementById("savePinBtn");
+      if (savePinBtn) savePinBtn.addEventListener("click", handleSavePin);
+      const removePinBtn = document.getElementById("removePinBtn");
+      if (removePinBtn) removePinBtn.addEventListener("click", handleRemovePin);
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+      const goReportsBtn = document.getElementById("goReportsBtn");
+      if (goReportsBtn) goReportsBtn.addEventListener("click", goReports);
+      const reportsUpgradeBtn = document.getElementById("reportsUpgradeBtn");
+      if (reportsUpgradeBtn) reportsUpgradeBtn.addEventListener("click", goUpgrade);
+
+      const reportsBackBtn = document.getElementById("reportsBackBtn");
+      if (reportsBackBtn) reportsBackBtn.addEventListener("click", goHome);
+      root.querySelectorAll("[data-range]").forEach((el) => el.addEventListener("click", () => { reportsRange = el.dataset.range; fetchReports(); }));
+      const exportCsvBtn = document.getElementById("exportCsvBtn");
+      if (exportCsvBtn) exportCsvBtn.addEventListener("click", handleExportCsv);
+      const installBtn = document.getElementById("installBtn");
+      if (installBtn) installBtn.addEventListener("click", async () => {
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          const choice = await deferredInstallPrompt.userChoice;
+          deferredInstallPrompt = null;
+          if (choice.outcome === "accepted") flash("Installing…");
+          else render();
+        } else {
+          view = "install"; render();
+        }
+      });
+      const installBackBtn = document.getElementById("installBackBtn");
+      if (installBackBtn) installBackBtn.addEventListener("click", goHome);
+
+      const upgradeBackBtn = document.getElementById("upgradeBackBtn");
+      if (upgradeBackBtn) upgradeBackBtn.addEventListener("click", goHome);
+      root.querySelectorAll("[data-interval]").forEach((el) => el.addEventListener("click", () => { upgradeInterval = el.dataset.interval; render(); }));
+      const upgradeEmailInput = document.getElementById("upgradeEmailInput");
+      if (upgradeEmailInput) {
+        upgradeEmailInput.addEventListener("input", (e) => {
+          upgradeEmail = e.target.value;
+          const caret = e.target.selectionStart;
+          render();
+          const again = document.getElementById("upgradeEmailInput");
+          if (again) { again.focus(); again.setSelectionRange(caret, caret); }
+        });
+      }
+      const upgradeSubscribeBtn = document.getElementById("upgradeSubscribeBtn");
+      if (upgradeSubscribeBtn) upgradeSubscribeBtn.addEventListener("click", handleUpgradeSubscribe);
+      const upgradeRefreshBtn = document.getElementById("upgradeRefreshBtn");
+      if (upgradeRefreshBtn) upgradeRefreshBtn.addEventListener("click", handleUpgradeRefresh);
+
+      const greetingsBackBtn = document.getElementById("greetingsBackBtn");
+      if (greetingsBackBtn) greetingsBackBtn.addEventListener("click", goHome);
+      root.querySelectorAll("[data-greeting-template]").forEach((el) => el.addEventListener("click", () => { greetingTemplate = el.dataset.greetingTemplate; render(); }));
+      const greetingCustomInput = document.getElementById("greetingCustomInput");
+      if (greetingCustomInput) {
+        greetingCustomInput.addEventListener("input", (e) => {
+          greetingCustomText = e.target.value;
+          const caret = e.target.selectionStart;
+          render();
+          const again = document.getElementById("greetingCustomInput");
+          if (again) { again.focus(); again.setSelectionRange(caret, caret); }
+        });
+      }
+
+      const backBtn = document.getElementById("backBtn");
+      if (backBtn) backBtn.addEventListener("click", goHome);
+      const removeDebtorBtn = document.getElementById("removeDebtorBtn");
+      if (removeDebtorBtn) removeDebtorBtn.addEventListener("click", () => removeDebtor(selectedId));
+
+      const editCustomerBtn = document.getElementById("editCustomerBtn");
+      if (editCustomerBtn) editCustomerBtn.addEventListener("click", () => {
+        const d = debtors.find((x) => x.id === selectedId);
+        editCustName = d.name; editCustPhone = d.phone || ""; editCustBirthday = d.birthday || "";
+        editingCustomer = true; render();
+      });
+      const cancelEditCustBtn = document.getElementById("cancelEditCustBtn");
+      if (cancelEditCustBtn) cancelEditCustBtn.addEventListener("click", () => { editingCustomer = false; render(); });
+      const saveEditCustBtn = document.getElementById("saveEditCustBtn");
+      if (saveEditCustBtn) saveEditCustBtn.addEventListener("click", () => {
+        const nameV = document.getElementById("editCustNameInput").value.trim();
+        const phoneV = document.getElementById("editCustPhoneInput").value.trim();
+        const bdayV = document.getElementById("editCustBirthdayInput").value;
+        if (nameV) updateCustomer(selectedId, nameV, phoneV, bdayV);
+      });
+
+      const addEntryBtn = document.getElementById("addEntryBtn");
+      if (addEntryBtn) addEntryBtn.addEventListener("click", () => { addingEntry = true; resetAddForm(); render(); });
+      const cancelAddBtn = document.getElementById("cancelAddBtn");
+      if (cancelAddBtn) cancelAddBtn.addEventListener("click", () => { addingEntry = false; render(); });
+
+      root.querySelectorAll("[data-toggle-settle]").forEach((el) => {
+        const id = el.dataset.toggleSettle;
+        if (!id) return;
+        el.addEventListener("click", (ev) => {
+          if (ev.target.closest(".settle-form") || ev.target.closest(".entry-icons")) return;
+          if (openEntryId === id && openMode === "settle") closeEntryMode();
+          else { settleCustomAmt = ""; openEntryMode(id, "settle"); }
+        });
+      });
+      root.querySelectorAll(".settle-form").forEach((f) => f.addEventListener("click", (e) => e.stopPropagation()));
+      root.querySelectorAll("[data-close-entry]").forEach((el) => el.addEventListener("click", closeEntryMode));
+
+      root.querySelectorAll("[data-settle]").forEach((el) => el.addEventListener("click", () => settleEntry(el.dataset.settle, Number(el.dataset.amt))));
+      root.querySelectorAll("[data-settle-custom]").forEach((el) => el.addEventListener("click", () => {
+        const id = el.dataset.settleCustom, remaining = Number(el.dataset.remaining);
+        const input = document.getElementById("settleCustom-" + id);
+        const val = Number(input.value);
+        if (val > 0 && val <= remaining) settleEntry(id, val);
+      }));
+
+      root.querySelectorAll("[data-edit-entry]").forEach((el) => el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const id = el.dataset.editEntry;
+        const d = debtors.find((x) => x.id === selectedId);
+        const entry = d.entries.find((x) => x.id === id);
+        editItemVal = entry.item; editAmountVal = entry.amount;
+        openEntryMode(id, "edit");
+      }));
+      root.querySelectorAll("[data-save-edit]").forEach((el) => el.addEventListener("click", () => {
+        const id = el.dataset.saveEdit;
+        const itemInput = document.getElementById("editItem-" + id);
+        const amtInput = document.getElementById("editAmount-" + id);
+        if (itemInput.value.trim() && Number(amtInput.value) > 0) editEntry(id, itemInput.value.trim(), Number(amtInput.value));
+      }));
+
+      root.querySelectorAll("[data-delete-mode]").forEach((el) => el.addEventListener("click", (ev) => { ev.stopPropagation(); openEntryMode(el.dataset.deleteMode, "delete"); }));
+      root.querySelectorAll("[data-delete-entry]").forEach((el) => el.addEventListener("click", () => deleteEntry(el.dataset.deleteEntry)));
+
+      root.querySelectorAll("[data-item]").forEach((el) => el.addEventListener("click", () => { newItem = el.dataset.item; render(); }));
+      const customItemInput = document.getElementById("customItemInput");
+      if (customItemInput) { customItemInput.focus(); customItemInput.addEventListener("input", (e) => { newCustomItem = e.target.value; }); }
+
+      root.querySelectorAll("[data-add-amt]").forEach((el) => el.addEventListener("click", () => { newAmount += Number(el.dataset.addAmt); render(); }));
+      const resetAmtBtn = document.getElementById("resetAmtBtn");
+      if (resetAmtBtn) resetAmtBtn.addEventListener("click", () => { newAmount = 0; render(); });
+      const customAmtInput = document.getElementById("customAmtInput");
+      if (customAmtInput) customAmtInput.addEventListener("input", (e) => { newAmount = Number(e.target.value) || 0; document.getElementById("saveEntryBtn").disabled = !((newItem === "Other" ? newCustomItem : newItem).trim() && newAmount > 0); });
+
+      const micBtn = document.getElementById("micBtn");
+      if (micBtn) micBtn.addEventListener("click", tryVoice);
+
+      const saveEntryBtn = document.getElementById("saveEntryBtn");
+      if (saveEntryBtn) saveEntryBtn.addEventListener("click", () => {
+        const finalItem = (newItem === "Other" ? newCustomItem : newItem).trim();
+        if (finalItem && newAmount > 0) addEntry(finalItem, newAmount);
+      });
+
+      const cancelDebtorBtn = document.getElementById("cancelDebtorBtn");
+      if (cancelDebtorBtn) cancelDebtorBtn.addEventListener("click", goHome);
+      const nameInput = document.getElementById("nameInput");
+      const saveDebtorBtn = document.getElementById("saveDebtorBtn");
+      if (nameInput && saveDebtorBtn) {
+        nameInput.focus();
+        nameInput.addEventListener("input", () => { saveDebtorBtn.disabled = !nameInput.value.trim(); });
+        saveDebtorBtn.addEventListener("click", () => {
+          const phoneInput = document.getElementById("phoneInput");
+          const birthdayInput = document.getElementById("birthdayInput");
+          if (nameInput.value.trim()) addDebtor(nameInput.value.trim(), phoneInput.value.trim(), birthdayInput.value);
+        });
+      }
+    }
+
+    function tryVoice() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { alert("Voice isn't available on this device, just tap an amount instead."); return; }
+      const rec = new SR();
+      rec.lang = "en-NG";
+      rec.onstart = () => { listening = true; render(); };
+      rec.onerror = () => { listening = false; render(); };
+      rec.onend = () => { listening = false; render(); };
+      rec.onresult = (ev) => {
+        const said = ev.results[0][0].transcript;
+        const spoken = parseSpokenAmount(said);
+        if (spoken) newAmount = spoken;
+        render();
+      };
+      rec.start();
+    }
+
+/* ---------- spoken numbers + speech parsing (pure functions, no DOM) ---------- */
+const SP_ONES = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19 };
+const SP_TENS = { twenty:20, thirty:30, forty:40, fourty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90 };
+const SP_SCALE = { hundred:100, thousand:1000, million:1000000 };
+const SP_UNITS = { pack:"pack", packs:"pack", packet:"pack", packets:"pack", bag:"bag", bags:"bag", bottle:"bottle", bottles:"bottle",
+  crate:"crate", crates:"crate", carton:"carton", cartons:"carton", piece:"piece", pieces:"piece", pcs:"piece", pc:"piece",
+  dozen:"dozen", dozens:"dozen", sachet:"sachet", sachets:"sachet", bundle:"bundle", bundles:"bundle", bucket:"bucket", buckets:"bucket",
+  gallon:"gallon", gallons:"gallon", sack:"sack", sacks:"sack", tray:"tray", trays:"tray", plate:"plate", plates:"plate",
+  pair:"pair", pairs:"pair", yard:"yard", yards:"yard", roll:"roll", rolls:"roll", kg:"kg", kilo:"kg", kilos:"kg",
+  litre:"litre", litres:"litre", liter:"litre", liters:"litre", cup:"cup", cups:"cup", tin:"tin", tins:"tin" };
+const SP_STOP = new Set(["sold","sell","selling","sale","sales","i","we","a","an","the","of","my","some","please","record","add","just",
+  "only","bought","buy","got","have","has","had","with","another","more","about","around","to","from","that","is","are","was","were","it","today","yesterday"]);
+const SP_PRICEWORDS = new Set(["at","per","each","apiece","for","total","worth","cost","costs","price","priced","naira","x"]);
+const SP_SEP = new Set([",", ";", "then", "plus", "also", "and"]);
+
+function spNormalize(text) {
+  let s = String(text || "").toLowerCase();
+  s = s.replace(/₦/g, " ");
+  s = s.replace(/\b(naira|ngn)\b/g, " naira ");
+  s = s.replace(/(\d),(?=\d{3}(\D|$))/g, "$1");                     // 1,500 -> 1500
+  s = s.replace(/\bn(?=\d)/g, " ");                                  // N500 -> 500
+  s = s.replace(/(\d+(?:\.\d+)?)\s*k\b/g, (m, n) => String(Math.round(parseFloat(n) * 1000))); // 2k, 2.5k
+  s = s.replace(/@/g, " at ");
+  s = s.replace(/(\d)\s*x\b/g, "$1 ");                               // 3x pure water -> 3 pure water
+  s = s.replace(/\bx\s*(?=\d)/g, " x ");                             // x3 -> x 3
+  s = s.replace(/-/g, " ");
+  return s;
+}
+function spTokens(s) { return s.match(/\d+(?:\.\d+)?|[a-z]+(?:'[a-z]+)?|[,;]/g) || []; }
+
+// Reads a number (digits or words) starting at tokens[i]. Returns { value, next } or null.
+function spReadNumber(tokens, i) {
+  let j = i, total = 0, cur = 0, any = false, last = null;
+  while (j < tokens.length) {
+    const t = tokens[j];
+    if (/^\d/.test(t)) {
+      if (any) break;
+      cur = parseFloat(t); any = true; last = "digit"; j++;
+    } else if (Object.prototype.hasOwnProperty.call(SP_ONES, t)) {
+      const v = SP_ONES[t];
+      if (!any) { cur = v; any = true; last = "ones"; j++; }
+      else if (last === "scale" || last === "and") { cur += v; last = "ones"; j++; }
+      else if (last === "tens" && v > 0 && v < 10) { cur += v; last = "ones"; j++; }
+      else break;
+    } else if (Object.prototype.hasOwnProperty.call(SP_TENS, t)) {
+      const v = SP_TENS[t];
+      if (!any) { cur = v; any = true; last = "tens"; j++; }
+      else if (last === "scale" || last === "and") { cur += v; last = "tens"; j++; }
+      else break;
+    } else if (Object.prototype.hasOwnProperty.call(SP_SCALE, t)) {
+      const mult = SP_SCALE[t];
+      if (!any) { cur = 1; any = true; }
+      else if (last === "scale" && cur === 0) break;
+      if (mult === 100) cur = (cur || 1) * 100;
+      else { total += (cur || 1) * mult; cur = 0; }
+      last = "scale"; j++;
+    } else if (t === "and" && any && last === "scale" && j + 1 < tokens.length &&
+               (Object.prototype.hasOwnProperty.call(SP_ONES, tokens[j + 1]) || Object.prototype.hasOwnProperty.call(SP_TENS, tokens[j + 1]))) {
+      last = "and"; j++;
+    } else break;
+  }
+  return any ? { value: total + cur, next: j } : null;
+}
+
+function spAnnotate(tokens) {
+  const out = [];
+  for (let i = 0; i < tokens.length;) {
+    const r = spReadNumber(tokens, i);
+    if (r) { out.push({ type: "num", value: r.value }); i = r.next; }
+    else { out.push({ type: "word", w: tokens[i] }); i++; }
+  }
+  return out;
+}
+
+// Largest-first is wrong for "two thousand five hundred" (one span), so: first number said.
+function parseSpokenAmount(text) {
+  const ann = spAnnotate(spTokens(spNormalize(text)));
+  const n = ann.find((a) => a.type === "num");
+  return n ? n.value : null;
+}
+
+/* ---------- sales speech: "3 packs of pure water at 700 and 2 ice block" ---------- */
+function spStem(w) {
+  w = String(w).replace(/[^a-z0-9]/g, "");
+  if (w.length > 4 && w.endsWith("ies")) return w.slice(0, -3) + "y";
+  if (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) return w.slice(0, -1);
+  return w;
+}
+function spLev(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, k) => k);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+function spMatchProduct(nameWords, products) {
+  if (!nameWords.length || !products || !products.length) return null;
+  const spoken = nameWords.map(spStem).filter(Boolean);
+  if (!spoken.length) return null;
+  const joined = spoken.join("");
+  const scored = [];
+  for (const p of products) {
+    const ptoks = String(p.name).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(spStem);
+    const pj = ptoks.join("");
+    let score = 0;
+    if (joined === pj) score = 1;
+    else {
+      const common = spoken.filter((t) => ptoks.some((u) => u === t || (t.length >= 5 && spLev(t, u) <= 1))).length;
+      if (common > 0) {
+        const contSpoken = common / spoken.length, contProd = common / ptoks.length;
+        score = contSpoken * 0.85 * (contProd >= 0.5 || contSpoken === 1 ? 1 : 0.6);
+      }
+      if (pj.length >= 4 && spLev(joined, pj) <= Math.max(1, Math.floor(pj.length * 0.2))) score = Math.max(score, 0.9);
+    }
+    if (score > 0) scored.push({ p, score });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  if (!scored.length || scored[0].score < 0.6) return null;
+  if (scored.length > 1 && scored[0].score < 1 && Math.abs(scored[0].score - scored[1].score) < 0.01) return null; // ambiguous
+  return scored[0].p;
+}
+
+function spNumKind(seg, k) {
+  const prev = seg[k - 1] && seg[k - 1].type === "word" ? seg[k - 1].w : null;
+  const next = seg[k + 1] && seg[k + 1].type === "word" ? seg[k + 1].w : null;
+  if (prev === "at" || prev === "per" || next === "each" || next === "apiece") return "unit";
+  if (prev === "for" || prev === "total" || prev === "worth" || prev === "cost" || prev === "costs" || prev === "price" || prev === "priced") return "total";
+  if (prev === "x") return "qty";
+  return "bare";
+}
+function spIsNameWord(a) {
+  return a.type === "word" && !SP_UNITS[a.w] && !SP_STOP.has(a.w) && !SP_PRICEWORDS.has(a.w);
+}
+// "3 pure water 2 ice block" (no "and") -> two segments
+function spSplitBare(seg) {
+  const bare = [];
+  seg.forEach((a, k) => { if (a.type === "num" && spNumKind(seg, k) === "bare") bare.push(k); });
+  if (bare.length < 2) return [seg];
+  const firstSig = seg.find((a) => a.type === "num" || spIsNameWord(a));
+  const qtyFirst = firstSig && firstSig.type === "num";
+  const cuts = [];
+  if (qtyFirst) {
+    for (const k of bare.slice(1)) {
+      const nameBefore = seg.slice(0, k).some(spIsNameWord);
+      const nameAfter = seg.slice(k + 1).some(spIsNameWord);
+      if (nameBefore && nameAfter) cuts.push(k);
+    }
+  } else {
+    for (const k of bare.slice(0, -1)) if (seg.slice(k + 1).some(spIsNameWord)) cuts.push(k + 1);
+  }
+  if (!cuts.length) return [seg];
+  const out = []; let from = 0;
+  for (const c of cuts) { out.push(seg.slice(from, c)); from = c; }
+  out.push(seg.slice(from));
+  return out.filter((s) => s.length);
+}
+
+function spTitle(words) { return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "); }
+
+function spParseSegment(seg, products) {
+  const nums = []; const nameWords = []; let unit = null;
+  seg.forEach((a, k) => {
+    if (a.type === "num") {
+      const next = seg[k + 1] && seg[k + 1].type === "word" ? seg[k + 1].w : null;
+      nums.push({ value: a.value, kind: spNumKind(seg, k), naira: next === "naira" });
+    } else if (SP_UNITS[a.w]) { if (!unit) unit = SP_UNITS[a.w]; }
+    else if (!SP_STOP.has(a.w) && !SP_PRICEWORDS.has(a.w)) nameWords.push(a.w);
+  });
+  if (!nameWords.length) return null;
+  const product = spMatchProduct(nameWords, products);
+  const priceKnown = product && Number(product.price) > 0 ? Number(product.price) : null;
+
+  let qty = null, money = null, moneyKind = null;
+  const explicitQty = nums.find((n) => n.kind === "qty");
+  const unitNum = nums.find((n) => n.kind === "unit");
+  const totalNum = nums.find((n) => n.kind === "total");
+  const bares = nums.filter((n) => n.kind === "bare");
+  if (explicitQty) qty = explicitQty.value;
+  if (unitNum) { money = unitNum.value; moneyKind = "unit"; }
+  else if (totalNum) { money = totalNum.value; moneyKind = "total"; }
+
+  const freeBares = bares.slice();
+  if (qty === null) {
+    const qIdx = freeBares.findIndex((n) => !n.naira);
+    if (qIdx >= 0 && (freeBares.length > 1 || money !== null)) { qty = freeBares[qIdx].value; freeBares.splice(qIdx, 1); }
+  }
+  if (money === null && freeBares.length) {
+    // a second bare number (or a number followed by "naira") is money
+    const m = freeBares.find((n) => n.naira) || freeBares[freeBares.length - 1];
+    if (qty !== null || m.naira || freeBares.length > 1) { money = m.value; moneyKind = "bare"; freeBares.splice(freeBares.indexOf(m), 1); }
+  }
+  // exactly one lone number, no markers: decide whether it's a quantity or an amount
+  if (qty === null && money === null && freeBares.length === 1) {
+    const n = freeBares[0].value;
+    if (priceKnown) {
+      if (n === priceKnown) { qty = 1; }
+      else if (n <= 200) { qty = n; }
+      else if (n % priceKnown === 0) { qty = n / priceKnown; }
+      else { qty = 1; money = n; moneyKind = "unit"; }
+    } else if (n <= 100) { qty = n; }
+    else { qty = 1; money = n; moneyKind = "unit"; }
+  }
+  if (qty === null || qty <= 0) qty = 1;
+
+  let unitPrice = priceKnown;
+  if (money !== null) {
+    if (moneyKind === "unit") unitPrice = money;
+    else if (moneyKind === "total") unitPrice = qty > 1 ? money / qty : money;
+    else { // bare: unit or total? use the product's price as a guide
+      if (priceKnown && qty > 1 && Math.abs(money - priceKnown * qty) < Math.abs(money - priceKnown)) unitPrice = money / qty;
+      else unitPrice = money;
+    }
+  }
+  if (unitPrice !== null) unitPrice = Math.round(unitPrice * 100) / 100;
+  return {
+    name: product ? product.name : spTitle(nameWords),
+    productId: product ? product.id : null,
+    isNew: !product,
+    qty, unit: product ? (product.unit || unit) : unit,
+    unitPrice: unitPrice && unitPrice > 0 ? unitPrice : null,
+  };
+}
+
+function parseSalesSpeech(text, products) {
+  const ann = spAnnotate(spTokens(spNormalize(text)));
+  const segs = [[]];
+  for (const a of ann) {
+    if (a.type === "word" && SP_SEP.has(a.w)) { if (segs[segs.length - 1].length) segs.push([]); continue; }
+    segs[segs.length - 1].push(a);
+  }
+  const items = [];
+  for (const seg of segs.filter((s) => s.length)) {
+    for (const sub of spSplitBare(seg)) {
+      const it = spParseSegment(sub, products || []);
+      if (it) items.push(it);
+    }
+  }
+  return { heard: String(text || "").trim(), items };
+}
+
+/* ---------- "I owe" speech: "I owe Mama Ade 15000 for fish", "I paid Chidi 5k" ---------- */
+const OWE_NOISE = new Set(["i","we","owe","owes","owing","borrowed","borrow","from","to","paid","pay","gave","give","sent","send","settled",
+  "collected","took","take","credit","bought","buy","got","the","a","an","naira","please","money","some","still","today","just","am","have","has","had","me","my"]);
+function parseOweSpeech(text, knownNames) {
+  const norm = spNormalize(text);
+  const toks = spTokens(norm);
+  const ann = spAnnotate(toks);
+  const nums = ann.filter((a) => a.type === "num");
+  if (!nums.length) return { intent: "owe", name: "", amount: null, item: "", heard: String(text || "").trim() };
+  const amountSpan = nums.reduce((best, n) => (n.value > best.value ? n : best), nums[0]);
+  const intent = /\b(paid|pay|gave|give|sent|send|settled|settle|cleared)\b/.test(norm) && !/\b(owe|owes|borrowed|credit|collected|took)\b/.test(norm) ? "pay" : "owe";
+  // item: whatever follows for/on/being
+  let item = "";
+  const m = norm.match(/\b(?:for|on|being)\b\s+(.+)$/);
+  if (m) item = m[1].replace(/\b(naira)\b/g, " ").replace(/\s+/g, " ").trim();
+  // name: words before the amount, minus noise
+  const idx = ann.indexOf(amountSpan);
+  const nameCand = [];
+  for (let k = 0; k < idx; k++) {
+    const a = ann[k];
+    if (a.type === "word" && !OWE_NOISE.has(a.w) && !SP_PRICEWORDS.has(a.w) && !SP_SEP.has(a.w) && !SP_STOP.has(a.w)) nameCand.push(a.w);
+  }
+  let nameWords = nameCand;
+  if (!nameWords.length) {
+    // "15000 to Mama Ade": look after the amount, up to for/on
+    for (let k = idx + 1; k < ann.length; k++) {
+      const a = ann[k];
+      if (a.type === "word" && (a.w === "for" || a.w === "on" || a.w === "being")) break;
+      if (a.type === "word" && !OWE_NOISE.has(a.w) && !SP_PRICEWORDS.has(a.w) && !SP_STOP.has(a.w)) nameWords.push(a.w);
+    }
+  }
+  let name = spTitle(nameWords.slice(0, 3));
+  // reuse an existing person if the name is close enough
+  if (name && knownNames && knownNames.length) {
+    const low = name.toLowerCase();
+    const hit = knownNames.find((n) => n.toLowerCase() === low) ||
+      knownNames.find((n) => spLev(n.toLowerCase(), low) <= Math.max(1, Math.floor(low.length * 0.25))) ||
+      knownNames.find((n) => n.toLowerCase().startsWith(low) || low.startsWith(n.toLowerCase()));
+    if (hit) name = hit;
+  }
+  return { intent, name, amount: amountSpan.value, item, heard: String(text || "").trim() };
+}
+
+
+/* =====================================================================
+   BETA: Sales tracker, "I owe", Summary  (data lives on this phone first)
+   ===================================================================== */
+const BIZ_PREVIEW_KEY = "mytab_beta_pro_preview";
+let _biz = null, _bizKey = null;
+function bizStoreKey() { return "mytab_biz_" + (getBusinessId() || "local") + "_v1"; }
+function bizData() {
+  const k = bizStoreKey();
+  if (_biz && _bizKey === k) return _biz;
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(k)); } catch (e) {}
+  _biz = Object.assign({ products: [], sales: [], creditors: [] }, d || {});
+  _bizKey = k;
+  return _biz;
+}
+function bizSave() { try { localStorage.setItem(bizStoreKey(), JSON.stringify(bizData())); } catch (e) {} }
+function bizPro() { let p = false; try { p = localStorage.getItem(BIZ_PREVIEW_KEY) === "1"; } catch (e) {} return !!isPro() || p; }
+
+/* ---- dates (local time, not UTC) ---- */
+const bzISO = (d) => { d = d || new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+const bzAddDays = (iso, n) => { const p = iso.split("-").map(Number); return bzISO(new Date(p[0], p[1] - 1, p[2] + n)); };
+const bzRange = (days) => { const t = bzISO(), out = []; for (let i = days - 1; i >= 0; i--) out.push(bzAddDays(t, -i)); return out; };
+const bzWeekday = (iso) => { const p = iso.split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString("en-NG", { weekday: "short" }); };
+const bzTime = (ts) => new Date(ts).toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" });
+const bzShort = (v) => v >= 1000000 ? (v / 1000000).toFixed(1).replace(/\.0$/, "") + "m" : v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1).replace(/\.0$/, "") + "k" : String(Math.round(v));
+
+/* ---- aggregation ---- */
+function bzSalesIn(dates) { const set = new Set(dates); return bizData().sales.filter((s) => set.has(s.date)); }
+function bzTotal(dates) { return bzSalesIn(dates).reduce((a, s) => a + s.total, 0); }
+function bzByProduct(dates) {
+  const m = new Map();
+  bzSalesIn(dates).forEach((s) => s.items.forEach((it) => {
+    const k = it.name.trim().toLowerCase();
+    const r = m.get(k) || { name: it.name, qty: 0, revenue: 0 };
+    r.qty += it.qty; r.revenue += it.qty * it.unitPrice; m.set(k, r);
+  }));
+  return [...m.values()].sort((a, b) => b.qty - a.qty || b.revenue - a.revenue);
+}
+function bzTopCustomers(dates) {
+  const m = new Map();
+  bzSalesIn(dates).forEach((s) => { if (!s.customerName) return; const r = m.get(s.customerName) || { name: s.customerName, total: 0, n: 0 }; r.total += s.total; r.n += 1; m.set(s.customerName, r); });
+  return [...m.values()].sort((a, b) => b.total - a.total);
+}
+const bzCreditorBalance = (c) => c.entries.reduce((a, e) => a + (e.kind === "pay" ? -e.amount : e.amount), 0);
+const bzTotalOwe = () => bizData().creditors.reduce((a, c) => a + Math.max(0, bzCreditorBalance(c)), 0);
+function bzOweHint() { const t = bzTotalOwe(); return t > 0 ? `<div class="biz-owehint">You owe ${fmt(t)}</div>` : ""; }
+
+/* ---- UI state ---- */
+let saleCart = [], salePaid = true, saleCust = "", saleNewName = "", saleNewPhone = "", saleHeard = "";
+let npOpen = false, npName = "", npPrice = "", npUnit = "pack";
+let oweOpenId = null, oweFormOpen = false, oweForm = { name: "", phone: "", amount: "", item: "" }, oweHeard = "";
+let owePayAmt = "", oweMoreAmt = "", oweMoreItem = "";
+let sumRange = 7, bizMic = null;
+
+/* ---- voice ---- */
+function bzListen(key, onText) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { flash("Voice isn't available on this phone, use the buttons instead."); return; }
+  if (bizMic) return;
+  const rec = new SR();
+  rec.lang = "en-NG"; rec.interimResults = false; rec.maxAlternatives = 1;
+  rec.onstart = () => { bizMic = key; render(); };
+  rec.onerror = (e) => {
+    bizMic = null;
+    if (e && e.error === "not-allowed") flash("Allow the microphone to use voice.");
+    else if (e && e.error === "no-speech") flash("Didn't hear anything, try again.");
+    else render();
+  };
+  rec.onend = () => { if (bizMic) { bizMic = null; render(); } };
+  rec.onresult = (ev) => { bizMic = null; onText(ev.results[0][0].transcript); };
+  try { rec.start(); } catch (e) { bizMic = null; }
+}
+const bzMicBtn = (key, label, act) => `<button class="biz-mic${bizMic === key ? " biz-mic--on" : ""}" data-b="${act}">${icon.mic}<span>${bizMic === key ? "Listening… speak now" : label}</span></button>`;
+
+/* ---- bottom navigation ---- */
+const BZ_NAV_VIEWS = ["home", "sales", "owe", "summary"];
+function bzNav() {
+  const ic = {
+    home: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+    sales: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>`,
+    owe: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7 7 7-7"/></svg>`,
+    summary: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>`,
+  };
+  const items = [["home", "Owed to me"], ["sales", "Sales"], ["owe", "I owe"], ["summary", "Summary"]];
+  const cur = view === "oweDetail" ? "owe" : view;
+  return `<nav class="biz-nav">${items.map(([v, l]) => `<button class="biz-nav-btn${cur === v ? " biz-nav-btn--on" : ""}" data-b="nav" data-v="${v}">${ic[v]}<span>${l}</span></button>`).join("")}</nav>`;
+}
+
+/* ---- customers (reuse the existing customer list = your customer database) ---- */
+function bzNewCustomer(name, phone) {
+  const id = crypto.randomUUID();
+  debtors.push({ id, name, phone: phone || "", birthday: "", entries: [] });
+  saveDebtors();
+  enqueue({ type: "create_customer", tempId: id, name, phone: phone || "", birthday: "" });
+  return id;
+}
+function bzAddDebt(customerId, item, amount) {
+  const d = debtors.find((x) => x.id === customerId); if (!d) return;
+  const id = crypto.randomUUID(), date = todayISO();
+  d.entries.push({ id, item, amount, date, paid: false, paidAmount: 0 });
+  saveDebtors();
+  enqueue({ type: "create_debt", tempId: id, customerId, item, amount, date });
+}
+
+/* =============================== SALES =============================== */
+const bzCartTotal = () => saleCart.reduce((a, l) => a + l.qty * (Number(l.unitPrice) || 0), 0);
+function bzCartAdd(line) {
+  const ex = saleCart.find((l) => (line.productId && l.productId === line.productId) || (!line.productId && !l.productId && l.name.toLowerCase() === line.name.toLowerCase()));
+  if (ex) { ex.qty += line.qty; if (!ex.unitPrice && line.unitPrice) ex.unitPrice = line.unitPrice; }
+  else saleCart.push(Object.assign({ key: crypto.randomUUID() }, line));
+}
+function bzSaleVoice(text) {
+  const r = parseSalesSpeech(text, bizData().products);
+  saleHeard = r.heard;
+  if (!r.items.length) { flash("Couldn't catch an item, try again."); return; }
+  r.items.forEach((it) => bzCartAdd({ productId: it.productId, name: it.name, qty: it.qty, unitPrice: it.unitPrice, isNew: it.isNew, unit: it.unit || "pack" }));
+  render(); buzz();
+}
+function bzRecordSale() {
+  const b = bizData();
+  if (!saleCart.length) return;
+  const missing = saleCart.find((l) => !(Number(l.unitPrice) > 0));
+  if (missing) { flash("Add a price for " + missing.name); return; }
+  let custId = null, custName = "";
+  if (!salePaid && !saleCust) { flash("Pick who owes you for this sale"); return; }
+  if (saleCust === "__new") {
+    if (!saleNewName.trim()) { flash(salePaid ? "Type the customer's name or pick No customer" : "Type the customer's name"); return; }
+    if (!isPro() && billingStatus && billingStatus.customerLimit != null && debtors.length >= billingStatus.customerLimit) { flash("Free customer limit reached"); goUpgrade(); return; }
+    custId = bzNewCustomer(saleNewName.trim(), saleNewPhone.trim()); custName = saleNewName.trim();
+  } else if (saleCust) {
+    const d = debtors.find((x) => x.id === saleCust); if (d) { custId = d.id; custName = d.name; }
+  }
+  saleCart.forEach((l) => {
+    if (!l.productId) {
+      const ex = b.products.find((p) => p.name.toLowerCase() === l.name.toLowerCase());
+      if (ex) l.productId = ex.id;
+      else { const p = { id: crypto.randomUUID(), name: l.name, unit: l.unit || "pack", price: Number(l.unitPrice) }; b.products.push(p); l.productId = p.id; }
+    }
+  });
+  const items = saleCart.map((l) => ({ productId: l.productId, name: l.name, qty: Number(l.qty), unitPrice: Number(l.unitPrice) }));
+  const total = items.reduce((a, i) => a + i.qty * i.unitPrice, 0);
+  const now = new Date();
+  b.sales.push({ id: crypto.randomUUID(), ts: now.getTime(), date: bzISO(now), items, total, paid: salePaid, customerId: custId, customerName: custName });
+  bizSave();
+  if (!salePaid && custId) bzAddDebt(custId, items.map((i) => i.qty + " " + i.name).join(", "), total);
+  saleCart = []; saleHeard = ""; saleCust = ""; saleNewName = ""; saleNewPhone = ""; salePaid = true;
+  render(); buzz(); flash("Sale recorded · " + fmt(total));
+}
+function bzSaleSummary(s) { return s.items.map((i) => i.qty + " × " + i.name).join(", "); }
+
+function renderSales() {
+  const b = bizData(), today = bzISO();
+  const todays = b.sales.filter((s) => s.date === today).sort((a, c) => c.ts - a.ts);
+  const tot = todays.reduce((a, s) => a + s.total, 0);
+  const prodChips = b.products.map((p) => `<button class="chip" data-b="addProd" data-id="${esc(p.id)}">${esc(p.name)} <span class="biz-dim">${fmt(p.price)}</span></button>`).join("");
+  const cart = saleCart.map((l) => `
+    <div class="biz-line">
+      <div class="biz-line-top">
+        <div class="biz-line-name">${esc(l.name)}${l.isNew && !l.productId ? ` <span class="biz-new">new</span>` : ""}</div>
+        <button class="biz-x" data-b="cartDel" data-key="${esc(l.key)}" aria-label="Remove">${icon.x}</button>
+      </div>
+      <div class="biz-line-row">
+        <div class="biz-step"><button data-b="cartMinus" data-key="${esc(l.key)}">−</button><span>${l.qty}</span><button data-b="cartPlus" data-key="${esc(l.key)}">+</button></div>
+        <span class="biz-dim">×</span>
+        <input class="biz-price${Number(l.unitPrice) > 0 ? "" : " biz-price--need"}" data-b="cartPrice" data-ev="input" data-key="${esc(l.key)}" type="tel" inputmode="numeric" placeholder="price" value="${l.unitPrice || ""}" />
+        <span class="biz-line-total">${fmt(l.qty * (Number(l.unitPrice) || 0))}</span>
+      </div>
+    </div>`).join("");
+  const custOpts = `<option value="">${salePaid ? "No customer" : "Pick customer…"}</option>` +
+    [...debtors].sort((a, c) => a.name.localeCompare(c.name)).map((d) => `<option value="${esc(d.id)}"${saleCust === d.id ? " selected" : ""}>${esc(d.name)}${d.phone ? " · " + esc(d.phone) : ""}</option>`).join("") +
+    `<option value="__new"${saleCust === "__new" ? " selected" : ""}>+ New customer</option>`;
+  const history = todays.map((s) => `
+    <div class="biz-hist">
+      <div style="min-width:0;flex:1;">
+        <div class="biz-hist-main">${esc(bzSaleSummary(s))}</div>
+        <div class="biz-dim">${bzTime(s.ts)}${s.customerName ? " · " + esc(s.customerName) : ""}${s.paid ? "" : ` · <b style="color:var(--yellow)">on credit</b>`}</div>
+      </div>
+      <div class="biz-hist-amt">${fmt(s.total)}</div>
+      <button class="biz-x" data-b="saleDel" data-id="${esc(s.id)}" aria-label="Delete sale">${icon.trashSm}</button>
+    </div>`).join("");
+  return `<div class="screen">
+    <div class="hero">
+      <div class="brand-name">MyTab <span class="beta-chip">BETA</span></div>
+      <div class="hero-label">Sold today</div>
+      <div class="hero-amount">${fmt(tot)}</div>
+      <div class="hero-label" style="margin-top:2px;">${todays.length} sale${todays.length === 1 ? "" : "s"}</div>
+    </div>
+    <div class="biz-body">
+      ${bzMicBtn("sale", "Say what you sold", "saleMic")}
+      <div class="biz-eg">Try: “3 pure water and 2 ice block”</div>
+      ${saleHeard ? `<div class="biz-heard">Heard: “${esc(saleHeard)}”. Check below, then record.</div>` : ""}
+
+      <div class="quickadd-label" style="margin-top:16px;">Your products</div>
+      <div class="quick-row" style="flex-wrap:wrap;margin-top:8px;">
+        ${prodChips}
+        <button class="chip chip--ghost" data-b="npToggle">${npOpen ? "Cancel" : "+ New product"}</button>
+      </div>
+      ${!b.products.length && !npOpen ? `<div class="biz-eg" style="text-align:left;">Add your products once (name + price), then just tap to sell. Or say a sale and we'll add them for you.</div>` : ""}
+      ${npOpen ? `<div class="biz-card">
+        <div class="stage-form" style="margin:0;gap:10px;">
+          <label>Product name<input data-b="npName" data-ev="input" placeholder="e.g. Pure water" value="${esc(npName)}" /></label>
+          <div style="display:flex;gap:10px;">
+            <label style="flex:1;">Price (₦)<input data-b="npPrice" data-ev="input" type="tel" inputmode="numeric" placeholder="700" value="${esc(npPrice)}" /></label>
+            <label style="flex:1;">Sold by<select data-b="npUnit" data-ev="change">${["pack", "piece", "bottle", "bag", "crate", "carton", "plate", "kg", "dozen"].map((u) => `<option${npUnit === u ? " selected" : ""}>${u}</option>`).join("")}</select></label>
+          </div>
+          <button class="settle-btn" data-b="npSave">Save product</button>
+        </div></div>` : ""}
+
+      <div class="quickadd-label" style="margin-top:18px;">This sale</div>
+      ${saleCart.length ? cart : `<div class="biz-eg" style="text-align:left;">Tap a product above or use the mic.</div>`}
+
+      ${saleCart.length ? `
+      <div class="biz-pay">
+        <button class="chip${salePaid ? " chip--active" : ""}" data-b="salePaid" data-v="1">Paid now</button>
+        <button class="chip${!salePaid ? " chip--active" : ""}" data-b="salePaid" data-v="0">On credit</button>
+      </div>
+      <div class="stage-form" style="margin:10px 0 0;gap:10px;">
+        <label>${salePaid ? "Customer <span class=\"optional\">(optional, saves them to your customer list)</span>" : "Who owes you?"}
+          <select data-b="saleCust" data-ev="change">${custOpts}</select></label>
+        ${saleCust === "__new" ? `
+          <label>Name<input data-b="saleNewName" data-ev="input" placeholder="Customer name" value="${esc(saleNewName)}" /></label>
+          <label>Phone <span class="optional">(optional)</span><input data-b="saleNewPhone" data-ev="input" type="tel" inputmode="numeric" placeholder="0803…" value="${esc(saleNewPhone)}" /></label>` : ""}
+      </div>
+      <button class="primary-btn" data-b="saleRecord" style="margin:14px 0 0;">Record sale · <span id="cartTotal">${fmt(bzCartTotal())}</span></button>` : ""}
+
+      ${todays.length ? `<div class="quickadd-label" style="margin-top:22px;">Sold today</div>${history}` : ""}
+    </div>
+  </div>`;
+}
+
+/* =============================== I OWE =============================== */
+function bzOweAdd(name, phone, amount, item) {
+  const b = bizData();
+  let c = b.creditors.find((x) => x.name.toLowerCase() === name.toLowerCase());
+  if (!c) { c = { id: crypto.randomUUID(), name, phone: phone || "", entries: [] }; b.creditors.push(c); }
+  else if (phone && !c.phone) c.phone = phone;
+  c.entries.push({ id: crypto.randomUUID(), kind: "owe", amount, item: item || "", date: bzISO() });
+  bizSave(); return c;
+}
+function bzOweVoice(text) {
+  const names = bizData().creditors.map((c) => c.name);
+  const r = parseOweSpeech(text, names);
+  oweHeard = r.heard;
+  if (r.amount == null) { flash("Didn't catch an amount, try again."); return; }
+  if (r.intent === "pay") {
+    const c = bizData().creditors.find((x) => x.name.toLowerCase() === (r.name || "").toLowerCase());
+    if (!c) { flash("Couldn't find who you paid, open the person and tap I paid."); return; }
+    oweOpenId = c.id; view = "oweDetail"; owePayAmt = String(r.amount); render(); return;
+  }
+  oweForm = { name: r.name || "", phone: "", amount: String(r.amount), item: r.item || "" };
+  oweFormOpen = true; render(); buzz();
+}
+function renderOwe() {
+  const b = bizData();
+  const list = [...b.creditors].filter((c) => bzCreditorBalance(c) > 0).sort((a, c) => bzCreditorBalance(c) - bzCreditorBalance(a));
+  const settled = b.creditors.filter((c) => bzCreditorBalance(c) <= 0);
+  const rows = (arr, dim) => arr.map((c) => `
+    <button class="biz-row" data-b="oweOpen" data-id="${esc(c.id)}">
+      <div style="text-align:left;min-width:0;"><div class="biz-row-name">${esc(c.name)}</div><div class="biz-dim">${c.entries.length} record${c.entries.length === 1 ? "" : "s"}${c.phone ? " · " + esc(c.phone) : ""}</div></div>
+      <div class="biz-row-amt${dim ? " biz-row-amt--dim" : ""}">${dim ? "Cleared" : fmt(bzCreditorBalance(c))}</div>
+    </button>`).join("");
+  return `<div class="screen">
+    <div class="hero" style="background:#7A3B2E;">
+      <div class="brand-name">MyTab <span class="beta-chip">BETA</span></div>
+      <div class="hero-label">Total you owe</div>
+      <div class="hero-amount">${fmt(bzTotalOwe())}</div>
+    </div>
+    <div class="biz-body">
+      ${bzMicBtn("owe", "Say it: “I owe Mama Ade 15000 for fish”", "oweMic")}
+      ${oweHeard ? `<div class="biz-heard">Heard: “${esc(oweHeard)}”. Check below, then save.</div>` : ""}
+      ${oweFormOpen ? `<div class="biz-card">
+        <div class="stage-form" style="margin:0;gap:10px;">
+          <label>Who do you owe?<input data-b="ofName" data-ev="input" placeholder="Name (supplier, friend, shop…)" value="${esc(oweForm.name)}" /></label>
+          <label>Amount (₦)<input data-b="ofAmount" data-ev="input" type="tel" inputmode="numeric" placeholder="15000" value="${esc(oweForm.amount)}" /></label>
+          <label>For what <span class="optional">(optional)</span><input data-b="ofItem" data-ev="input" placeholder="e.g. fish, rent, stock" value="${esc(oweForm.item)}" /></label>
+          <label>Phone <span class="optional">(optional)</span><input data-b="ofPhone" data-ev="input" type="tel" inputmode="numeric" placeholder="0803…" value="${esc(oweForm.phone)}" /></label>
+          <div class="settle-actions"><button class="settle-btn" data-b="ofSave">Save</button><button class="ghost-btn" data-b="ofCancel">Cancel</button></div>
+        </div></div>` : `<button class="ghost-btn" data-b="ofOpen" style="width:100%;justify-content:center;margin-top:10px;">+ Add what I owe, by typing</button>`}
+      <div class="quickadd-label" style="margin-top:20px;">People you owe</div>
+      ${list.length ? rows(list, false) : `<div class="empty"><div class="empty-title">You don't owe anyone</div><div class="empty-sub">Supplier, loan or installment. Add it here so you never forget.</div></div>`}
+      ${settled.length ? `<div class="quickadd-label" style="margin-top:20px;">Cleared</div>${rows(settled, true)}` : ""}
+    </div>
+  </div>`;
+}
+function renderOweDetail() {
+  const c = bizData().creditors.find((x) => x.id === oweOpenId);
+  if (!c) { view = "owe"; return renderOwe(); }
+  const bal = bzCreditorBalance(c);
+  const hist = [...c.entries].reverse().map((e) => `
+    <div class="biz-hist">
+      <div style="flex:1;min-width:0;"><div class="biz-hist-main">${e.kind === "pay" ? "You paid" : "You owed"}${e.item ? " · " + esc(e.item) : ""}</div><div class="biz-dim">${esc(e.date)}</div></div>
+      <div class="biz-hist-amt" style="color:${e.kind === "pay" ? "var(--green)" : "var(--red)"}">${e.kind === "pay" ? "−" : "+"}${fmt(e.amount)}</div>
+    </div>`).join("");
+  return `<div class="screen">
+    <div class="topbar">
+      <button class="iconbtn" data-b="oweBack">${icon.back}</button>
+      <div class="topbar-title">${esc(c.name)}</div>
+      <button class="iconbtn iconbtn--danger" data-b="oweRemove" aria-label="Remove">${icon.trash}</button>
+    </div>
+    <div class="biz-body">
+      <div class="balance-card" style="margin:0;">
+        <div class="balance-label">${bal > 0 ? "You still owe" : "All cleared"}</div>
+        <div class="hero-amount" style="color:${bal > 0 ? "var(--red)" : "var(--green)"};">${fmt(Math.max(0, bal))}</div>
+        ${c.phone ? `<div class="biz-dim" style="margin-top:4px;">${esc(c.phone)}</div>` : ""}
+      </div>
+      ${bal > 0 ? `<div class="quickadd-label" style="margin-top:18px;">I paid</div>
+        <div class="biz-inline">
+          <input data-b="opAmt" data-ev="input" type="tel" inputmode="numeric" placeholder="Amount paid" value="${esc(owePayAmt)}" />
+          ${bzMicBtn("opay", "Say", "opMic")}
+        </div>
+        <div class="settle-actions" style="margin-top:8px;"><button class="settle-btn" data-b="opSave">Record payment</button><button class="ghost-btn" data-b="opAll">Paid all</button></div>` : ""}
+      <div class="quickadd-label" style="margin-top:20px;">I owe more</div>
+      <div class="biz-inline">
+        <input data-b="omAmt" data-ev="input" type="tel" inputmode="numeric" placeholder="Amount" value="${esc(oweMoreAmt)}" />
+        ${bzMicBtn("omore", "Say", "omMic")}
+      </div>
+      <input class="biz-full" data-b="omItem" data-ev="input" placeholder="For what (optional)" value="${esc(oweMoreItem)}" />
+      <button class="settle-btn" data-b="omSave" style="width:100%;margin-top:8px;">Add</button>
+      <div class="quickadd-label" style="margin-top:22px;">History</div>
+      ${hist}
+    </div>
+  </div>`;
+}
+
+/* ============================== SUMMARY ============================== */
+function bzBarChart(vals, labels) {
+  const W = 340, H = 156, pl = 4, pr = 4, pt = 18, pb = 22, n = vals.length, max = Math.max(1, ...vals);
+  const bw = (W - pl - pr) / n, gap = Math.min(8, bw * 0.28);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Sales per day">`;
+  s += `<line x1="${pl}" x2="${W - pr}" y1="${H - pb}" y2="${H - pb}" stroke="var(--line)"/>`;
+  vals.forEach((v, i) => {
+    const h = Math.round((H - pt - pb) * v / max), x = pl + i * bw + gap / 2, y = H - pb - h, w = bw - gap, last = i === n - 1;
+    s += `<rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${Math.max(h, v > 0 ? 2 : 0)}" rx="3" fill="${last ? "var(--accent)" : "var(--primary)"}"/>`;
+    if (n <= 7 && v > 0) s += `<text x="${(x + w / 2).toFixed(1)}" y="${y - 4}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--ink-soft)">${bzShort(v)}</text>`;
+    if (labels[i]) s += `<text x="${(x + w / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9.5" fill="var(--ink-soft)">${labels[i]}</text>`;
+  });
+  return s + "</svg>";
+}
+function bzLockedSample() {
+  const fake = [3, 5, 4, 8, 6, 9, 7].map((v) => v * 1000);
+  return `<div class="biz-locked">
+    <div class="biz-blur">${bzBarChart(fake, ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])}
+      <div class="biz-hbar"><span style="width:90%"></span></div><div class="biz-hbar"><span style="width:62%"></span></div><div class="biz-hbar"><span style="width:35%"></span></div>
+    </div>
+    <div class="biz-lock-over">
+      <div style="font-weight:800;font-size:15px;">See what sells more</div>
+      <div class="biz-dim" style="margin:4px 0 12px;text-align:center;">Daily sales chart, best sellers, today vs yesterday and your top customers.</div>
+      <button class="settle-btn" data-b="goPro" style="flex:none;">Unlock with Pro</button>
+    </div>
+  </div>`;
+}
+function bzProCharts() {
+  const days = bzRange(sumRange), today = bzISO(), yest = bzAddDays(today, -1);
+  const vals = days.map((d) => bzTotal([d]));
+  const labels = days.map((d, i) => sumRange <= 7 ? bzWeekday(d) : ((i % 5 === 4 || i === days.length - 1) ? String(Number(d.slice(8))) : ""));
+  const best = bzByProduct(days).slice(0, 6), maxQ = Math.max(1, ...best.map((x) => x.qty));
+  const tp = bzByProduct([today]), yp = bzByProduct([yest]);
+  const names = new Map(); [...tp, ...yp].forEach((x) => names.set(x.name.toLowerCase(), x.name));
+  const qOf = (arr, nm) => { const r = arr.find((x) => x.name.toLowerCase() === nm); return r ? r.qty : 0; };
+  const cmp = [...names.entries()].map(([k, nm]) => ({ nm, t: qOf(tp, k), y: qOf(yp, k) })).sort((a, c) => c.t - a.t || c.y - a.y);
+  const cust = bzTopCustomers(days).slice(0, 5);
+  return `
+    <div class="tabs" style="margin:16px 0 0;">
+      <button class="tab${sumRange === 7 ? " tab--active" : ""}" data-b="sumRange" data-v="7">7 days</button>
+      <button class="tab${sumRange === 30 ? " tab--active" : ""}" data-b="sumRange" data-v="30">30 days</button>
+    </div>
+    <div class="biz-card"><div class="biz-h">Sales per day <span class="biz-dim">· ${fmt(bzTotal(days))} total</span></div>${bzBarChart(vals, labels)}</div>
+    <div class="biz-card"><div class="biz-h">What sells more</div>
+      ${best.length ? best.map((x) => `<div class="biz-hrow"><div class="biz-hname"><span>${esc(x.name)}</span><span class="biz-dim">${x.qty} sold · ${fmt(x.revenue)}</span></div><div class="biz-hbar"><span style="width:${Math.max(4, Math.round(100 * x.qty / maxQ))}%"></span></div></div>`).join("") : `<div class="biz-dim">No sales in this period yet.</div>`}
+    </div>
+    <div class="biz-card"><div class="biz-h">Today vs yesterday</div>
+      ${cmp.length ? `<div class="biz-cmp biz-cmp--head"><span>Product</span><span>Yest.</span><span>Today</span><span></span></div>` + cmp.map((r) => `<div class="biz-cmp"><span class="biz-cmp-n">${esc(r.nm)}</span><span>${r.y}</span><b>${r.t}</b><span style="color:${r.t > r.y ? "var(--green)" : r.t < r.y ? "var(--red)" : "var(--ink-soft)"};font-weight:800;">${r.t > r.y ? "▲" : r.t < r.y ? "▼" : "–"}</span></div>`).join("") : `<div class="biz-dim">Nothing sold today or yesterday yet.</div>`}
+    </div>
+    <div class="biz-card"><div class="biz-h">Top customers</div>
+      ${cust.length ? cust.map((x) => `<div class="biz-cmp" style="grid-template-columns:1fr auto;"><span class="biz-cmp-n">${esc(x.name)}</span><b>${fmt(x.total)}</b></div>`).join("") : `<div class="biz-dim">Link a customer when you record a sale and they show up here.</div>`}
+    </div>
+    <button class="ghost-btn" data-b="salesCsv" style="width:100%;justify-content:center;margin-top:12px;">Download sales as spreadsheet (CSV)</button>`;
+}
+function renderSummary() {
+  const today = bzISO(), yest = bzAddDays(today, -1), wk = bzRange(7);
+  const t = bzTotal([today]), y = bzTotal([yest]), w = bzTotal(wk);
+  const diff = y > 0 ? Math.round(100 * (t - y) / y) : null;
+  const top = bzByProduct([today])[0];
+  const owed = debtors.reduce((a, d) => a + balanceOf(d), 0), owe = bzTotalOwe();
+  const net = owed - owe;
+  return `<div class="screen">
+    <div class="hero">
+      <div class="brand-name">MyTab <span class="beta-chip">BETA</span></div>
+      <div class="hero-label">Summary</div>
+      <div class="hero-amount">${fmt(t)} <span style="font-size:13px;font-weight:600;opacity:.8;">today</span></div>
+    </div>
+    <div class="biz-body">
+      <div class="biz-grid">
+        <div class="biz-stat"><div class="biz-dim">Yesterday</div><b>${fmt(y)}</b>${diff !== null ? `<div style="font-size:11.5px;font-weight:700;color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff)}% today</div>` : ""}</div>
+        <div class="biz-stat"><div class="biz-dim">Last 7 days</div><b>${fmt(w)}</b></div>
+        <div class="biz-stat"><div class="biz-dim">Owed to you</div><b style="color:var(--green)">${fmt(owed)}</b></div>
+        <div class="biz-stat"><div class="biz-dim">You owe</div><b style="color:var(--red)">${fmt(owe)}</b></div>
+      </div>
+      <div class="biz-card" style="margin-top:12px;">
+        <div class="biz-dim">If everyone paid and you paid everyone</div>
+        <div style="font-weight:800;font-size:18px;color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net >= 0 ? "" : "−"}${fmt(Math.abs(net))} ${net >= 0 ? "ahead" : "behind"}</div>
+        ${top ? `<div class="biz-dim" style="margin-top:8px;">Top seller today: <b style="color:var(--ink)">${esc(top.name)}</b> (${top.qty})</div>` : ""}
+      </div>
+      ${bizPro() ? bzProCharts() : bzLockedSample()}
+      ${!isPro() ? `<button class="biz-preview" data-b="togglePreview">${bizPro() ? "Beta: turn off Pro preview" : "Beta: preview the Pro charts"}</button>` : ""}
+    </div>
+  </div>`;
+}
+
+/* =========================== BACKUP / SETTINGS =========================== */
+function bzSettingsCard() {
+  const b = bizData();
+  return `<div class="quickadd-label">Sales & I-owe data (beta)</div>
+    <div class="balance-card" style="margin:8px 0 20px;text-align:left;">
+      <div class="biz-dim" style="font-size:13px;">Saved on this phone only (${b.sales.length} sales, ${b.products.length} products, ${b.creditors.length} people you owe). Back it up so you never lose it.</div>
+      <div class="settle-actions" style="margin-top:10px;">
+        <button class="settle-btn" data-b="bkExport">Back up</button>
+        <button class="ghost-btn" data-b="bkImport">Restore</button>
+      </div>
+      <input type="file" id="bkFile" accept="application/json,.json" style="display:none" />
+      ${!isPro() ? `<button class="ghost-btn" data-b="togglePreview" style="margin-top:10px;width:100%;justify-content:center;">${bizPro() ? "Turn off Pro preview" : "Preview Pro charts (beta)"}</button>` : ""}
+    </div>`;
+}
+function bzDownload(name, text, type) {
+  const blob = new Blob([text], { type }), url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+function bzSalesCsv() {
+  const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+  const rows = [["Date", "Time", "Product", "Qty", "Unit price", "Line total", "Payment", "Customer"]];
+  [...bizData().sales].sort((a, c) => a.ts - c.ts).forEach((s) => s.items.forEach((i) => rows.push([s.date, bzTime(s.ts), i.name, i.qty, i.unitPrice, i.qty * i.unitPrice, s.paid ? "Paid" : "Credit", s.customerName || ""])));
+  bzDownload("mytab-sales.csv", rows.map((r) => r.map(q).join(",")).join("\n"), "text/csv");
+}
+
+/* =============================== EVENTS =============================== */
+function bzFind(key) { return saleCart.find((l) => l.key === key); }
+const BZ = {
+  nav: (el) => { view = el.dataset.v; oweFormOpen = false; window.scrollTo(0, 0); render(); },
+  saleMic: () => bzListen("sale", bzSaleVoice),
+  addProd: (el) => { const p = bizData().products.find((x) => x.id === el.dataset.id); if (p) { bzCartAdd({ productId: p.id, name: p.name, qty: 1, unitPrice: p.price, unit: p.unit }); render(); buzz(20); } },
+  npToggle: () => { npOpen = !npOpen; render(); },
+  npName: (el) => { npName = el.value; }, npPrice: (el) => { npPrice = el.value.replace(/\D/g, ""); }, npUnit: (el) => { npUnit = el.value; },
+  npSave: () => {
+    const b = bizData(), name = npName.trim(), price = Number(npPrice);
+    if (!name || !(price > 0)) { flash("Add a name and a price"); return; }
+    if (b.products.some((p) => p.name.toLowerCase() === name.toLowerCase())) { flash("You already have " + name); return; }
+    b.products.push({ id: crypto.randomUUID(), name, unit: npUnit, price }); bizSave();
+    npOpen = false; npName = ""; npPrice = ""; render(); flash(name + " added");
+  },
+  cartPlus: (el) => { const l = bzFind(el.dataset.key); if (l) { l.qty += 1; render(); } },
+  cartMinus: (el) => { const l = bzFind(el.dataset.key); if (l) { l.qty = Math.max(1, l.qty - 1); render(); } },
+  cartDel: (el) => { saleCart = saleCart.filter((l) => l.key !== el.dataset.key); render(); },
+  cartPrice: (el) => {
+    const l = bzFind(el.dataset.key); if (!l) return;
+    l.unitPrice = Number(el.value.replace(/\D/g, "")) || 0;
+    const t = document.getElementById("cartTotal"); if (t) t.textContent = fmt(bzCartTotal());
+    el.classList.toggle("biz-price--need", !(l.unitPrice > 0));
+    const lt = el.parentNode.querySelector(".biz-line-total"); if (lt) lt.textContent = fmt(l.qty * l.unitPrice);
+  },
+  salePaid: (el) => { salePaid = el.dataset.v === "1"; render(); },
+  saleCust: (el) => { saleCust = el.value; render(); },
+  saleNewName: (el) => { saleNewName = el.value; }, saleNewPhone: (el) => { saleNewPhone = el.value; },
+  saleRecord: () => bzRecordSale(),
+  saleDel: (el) => {
+    if (!confirm("Delete this sale? If it was on credit, also remove it from the customer's page.")) return;
+    const b = bizData(); b.sales = b.sales.filter((s) => s.id !== el.dataset.id); bizSave(); render(); flash("Sale deleted");
+  },
+  oweMic: () => bzListen("owe", bzOweVoice),
+  ofOpen: () => { oweFormOpen = true; oweHeard = ""; render(); },
+  ofCancel: () => { oweFormOpen = false; oweForm = { name: "", phone: "", amount: "", item: "" }; oweHeard = ""; render(); },
+  ofName: (el) => { oweForm.name = el.value; }, ofAmount: (el) => { oweForm.amount = el.value.replace(/\D/g, ""); },
+  ofItem: (el) => { oweForm.item = el.value; }, ofPhone: (el) => { oweForm.phone = el.value; },
+  ofSave: () => {
+    const name = oweForm.name.trim(), amt = Number(oweForm.amount);
+    if (!name || !(amt > 0)) { flash("Add a name and an amount"); return; }
+    bzOweAdd(name, oweForm.phone.trim(), amt, oweForm.item.trim());
+    oweForm = { name: "", phone: "", amount: "", item: "" }; oweFormOpen = false; oweHeard = ""; render(); buzz(); flash("Saved");
+  },
+  oweOpen: (el) => { oweOpenId = el.dataset.id; owePayAmt = ""; oweMoreAmt = ""; oweMoreItem = ""; view = "oweDetail"; window.scrollTo(0, 0); render(); },
+  oweBack: () => { view = "owe"; render(); },
+  oweRemove: () => {
+    const c = bizData().creditors.find((x) => x.id === oweOpenId); if (!c) return;
+    if (!confirm("Remove " + c.name + " and all their records?")) return;
+    const b = bizData(); b.creditors = b.creditors.filter((x) => x.id !== oweOpenId); bizSave(); view = "owe"; render(); flash("Removed");
+  },
+  opAmt: (el) => { owePayAmt = el.value.replace(/\D/g, ""); },
+  opMic: () => bzListen("opay", (t) => { const a = parseSpokenAmount(t); if (a) { owePayAmt = String(a); render(); } else flash("Didn't catch an amount."); }),
+  opSave: () => {
+    const c = bizData().creditors.find((x) => x.id === oweOpenId); if (!c) return;
+    const amt = Number(owePayAmt), bal = bzCreditorBalance(c);
+    if (!(amt > 0)) { flash("Enter the amount you paid"); return; }
+    c.entries.push({ id: crypto.randomUUID(), kind: "pay", amount: Math.min(amt, bal), item: "", date: bzISO() });
+    bizSave(); owePayAmt = ""; render(); buzz(); flash(amt >= bal ? "Fully paid 🎉" : "Payment recorded");
+  },
+  opAll: () => { const c = bizData().creditors.find((x) => x.id === oweOpenId); if (c) { owePayAmt = String(Math.max(0, bzCreditorBalance(c))); BZ.opSave(); } },
+  omAmt: (el) => { oweMoreAmt = el.value.replace(/\D/g, ""); }, omItem: (el) => { oweMoreItem = el.value; },
+  omMic: () => bzListen("omore", (t) => { const a = parseSpokenAmount(t); if (a) { oweMoreAmt = String(a); render(); } else flash("Didn't catch an amount."); }),
+  omSave: () => {
+    const c = bizData().creditors.find((x) => x.id === oweOpenId); const amt = Number(oweMoreAmt);
+    if (!c || !(amt > 0)) { flash("Enter an amount"); return; }
+    c.entries.push({ id: crypto.randomUUID(), kind: "owe", amount: amt, item: oweMoreItem.trim(), date: bzISO() });
+    bizSave(); oweMoreAmt = ""; oweMoreItem = ""; render(); buzz(); flash("Added");
+  },
+  sumRange: (el) => { sumRange = Number(el.dataset.v); render(); },
+  goPro: () => goUpgrade(),
+  togglePreview: () => { let on = false; try { on = localStorage.getItem(BIZ_PREVIEW_KEY) === "1"; localStorage.setItem(BIZ_PREVIEW_KEY, on ? "0" : "1"); } catch (e) {} render(); flash(on ? "Pro preview off" : "Pro preview on (beta only)"); },
+  salesCsv: () => { if (!bizPro()) { goUpgrade(); return; } bzSalesCsv(); },
+  bkExport: () => bzDownload("mytab-backup-" + bzISO() + ".json", JSON.stringify({ app: "mytab-biz", version: 1, businessId: getBusinessId(), exportedAt: new Date().toISOString(), data: bizData() }), "application/json"),
+  bkImport: () => { const f = document.getElementById("bkFile"); if (f) f.click(); },
+};
+function bzWire() {
+  const root = document.getElementById("phone");
+  root.querySelectorAll("[data-b]").forEach((el) => {
+    const fn = BZ[el.dataset.b]; if (!fn) return;
+    el.addEventListener(el.dataset.ev || "click", (e) => { if (!el.dataset.ev) e.preventDefault(); fn(el, e); });
+  });
+  const bk = document.getElementById("bkFile");
+  if (bk) bk.addEventListener("change", () => {
+    const f = bk.files && bk.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const j = JSON.parse(rd.result), d = j && j.data;
+        if (!d || !Array.isArray(d.sales) || !Array.isArray(d.products) || !Array.isArray(d.creditors)) throw new Error("bad");
+        if (!confirm("Replace the sales and I-owe data on this phone with this backup?")) return;
+        _biz = { products: d.products, sales: d.sales, creditors: d.creditors }; _bizKey = bizStoreKey(); bizSave(); render(); flash("Backup restored");
+      } catch (e) { flash("That file isn't a MyTab backup"); }
+    };
+    rd.readAsText(f);
+  });
+}
+
+    render();
+    refreshFromServerIfIdle();
+    fetchBillingStatus();
+  </script>
+</body>
+</html>
