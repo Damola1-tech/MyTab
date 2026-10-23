@@ -157,7 +157,7 @@
   .biz-eg { font-size:12px; color:var(--ink-soft); text-align:center; margin-top:6px; }
   .biz-heard { margin-top:10px; font-size:12.5px; background:var(--yellow-bg); color:var(--yellow); padding:8px 10px; border-radius:10px; font-weight:600; }
   .biz-owehint { margin-top:6px; font-size:12.5px; font-weight:700; color:#F7D9A0; }
-  .biz-mic { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; border:1.5px solid var(--accent); background:#FBF3DF; color:#7A520A; border-radius:14px; padding:14px; font-family:inherit; font-size:14.5px; font-weight:700; cursor:pointer; }
+  .biz-mic { display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--accent); background:#FBF3DF; color:#7A520A; border-radius:10px; padding:9px 12px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; }
   .biz-mic svg { width:18px; height:18px; }
   .biz-mic--on { background:var(--accent); color:#fff; animation:bizpulse 1.1s infinite; }
   @keyframes bizpulse { 50% { box-shadow:0 0 0 7px rgba(198,134,29,.25); } }
@@ -187,7 +187,7 @@
   .biz-inline { display:flex; gap:8px; margin-top:8px; align-items:stretch; }
   .biz-inline input, .biz-full { flex:1; border:1px solid var(--line); border-radius:10px; padding:12px; font-size:15px; font-family:inherit; color:var(--ink); background:var(--surface); min-width:0; }
   .biz-full { width:100%; margin-top:8px; }
-  .biz-inline .biz-mic { width:auto; padding:0 14px; border-radius:10px; font-size:13px; }
+  .biz-inline .biz-mic { padding:0 14px; }
   .biz-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .biz-stat { background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:12px 14px; display:flex; flex-direction:column; gap:2px; }
   .biz-stat b { font-size:17px; }
@@ -352,6 +352,14 @@
       updateSyncIndicator();
     }
 
+    function opFail(res, op) {
+      if (res.status === 401) { handleAuthExpired(); throw new Error('auth'); }
+      if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+        console.warn('Dropping a change the server will never accept:', op.type, res.status, res.error);
+        return true;
+      }
+      throw new Error(res.error);
+    }
     async function runOp(op) {
       try {
         if (op.type === "create_customer") {
@@ -380,7 +388,7 @@
             method: "PATCH",
             body: JSON.stringify({ name: op.name, phone: op.phone, birthday: op.birthday || undefined }),
           });
-          if (!res.ok) throw new Error(res.error);
+          if (!res.ok) return opFail(res, op);
           return true;
         }
         if (op.type === "delete_customer") {
@@ -395,7 +403,7 @@
             method: "POST",
             body: JSON.stringify({ item: op.item, amount: op.amount, date: op.date }),
           });
-          if (!res.ok) throw new Error(res.error);
+          if (!res.ok) return opFail(res, op);
           remapId(op.tempId, res.data.debt.id, "debt");
           return true;
         }
@@ -405,7 +413,7 @@
             method: "PATCH",
             body: JSON.stringify({ item: op.item, amount: op.amount }),
           });
-          if (!res.ok) throw new Error(res.error);
+          if (!res.ok) return opFail(res, op);
           return true;
         }
         if (op.type === "delete_debt") {
@@ -420,7 +428,7 @@
             method: "POST",
             body: JSON.stringify({ amount: op.amount }),
           });
-          if (!res.ok) throw new Error(res.error);
+          if (!res.ok) return opFail(res, op);
           return true;
         }
         return true;
@@ -473,7 +481,7 @@ document.addEventListener("visibilitychange", () => {
     function updateSyncIndicator() {
       const dot = document.getElementById("syncDot");
       if (!dot) return;
-      const pending = loadQueue().length;
+      const pending = loadQueue().length + (typeof bzQueueLen === 'function' ? bzQueueLen() : 0);
       if (!navigator.onLine) { dot.className = "sync-dot sync-dot--offline"; dot.title = "Offline, will sync when back online"; }
       else if (pending > 0) { dot.className = "sync-dot sync-dot--pending"; dot.title = pending + " change(s) waiting to sync"; }
       else { dot.className = "sync-dot sync-dot--synced"; dot.title = "Synced"; }
@@ -821,7 +829,7 @@ document.addEventListener("visibilitychange", () => {
       if (stage === "app") root.innerHTML += `<button class="sync-btn" id="syncBtn" aria-label="Refresh"><span class="sync-dot" id="syncDot"></span><span class="sync-ico">↻</span></button>`;
       if (toastMsg) root.innerHTML += `<div class="toast">${esc(toastMsg)}</div>`;
       wireEvents();
-      bzWire();
+      bzWire(); bzAutoStart();
       const syncBtn = document.getElementById("syncBtn");
       if (syncBtn) syncBtn.addEventListener("click", manualRefresh);
       if (stage === "app") updateSyncIndicator();
@@ -2150,7 +2158,8 @@ function bzListen(key, onText) {
   rec.onresult = (ev) => { bizMic = null; onText(ev.results[0][0].transcript); };
   try { rec.start(); } catch (e) { bizMic = null; }
 }
-const bzMicBtn = (key, label, act) => `<button class="biz-mic${bizMic === key ? " biz-mic--on" : ""}" data-b="${act}">${icon.mic}<span>${bizMic === key ? "Listening… speak now" : label}</span></button>`;
+const bzHasVoice = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+const bzMicBtn = (key, label, act) => !bzHasVoice() ? "" : `<button class="biz-mic${bizMic === key ? " biz-mic--on" : ""}" data-b="${act}">${icon.mic}<span>${bizMic === key ? "Listening… speak now" : label}</span></button>`;
 
 /* ---- bottom navigation ---- */
 const BZ_NAV_VIEWS = ["home", "sales", "owe", "summary"];
@@ -2214,14 +2223,15 @@ function bzRecordSale() {
     if (!l.productId) {
       const ex = b.products.find((p) => p.name.toLowerCase() === l.name.toLowerCase());
       if (ex) l.productId = ex.id;
-      else { const p = { id: crypto.randomUUID(), name: l.name, unit: l.unit || "pack", price: Number(l.unitPrice) }; b.products.push(p); l.productId = p.id; }
+      else { const p = { id: crypto.randomUUID(), name: l.name, unit: l.unit || "pack", price: Number(l.unitPrice) }; b.products.push(p); l.productId = p.id; bzMark("product", p.id); }
     }
   });
   const items = saleCart.map((l) => ({ productId: l.productId, name: l.name, qty: Number(l.qty), unitPrice: Number(l.unitPrice) }));
   const total = items.reduce((a, i) => a + i.qty * i.unitPrice, 0);
   const now = new Date();
-  b.sales.push({ id: crypto.randomUUID(), ts: now.getTime(), date: bzISO(now), items, total, paid: salePaid, customerId: custId, customerName: custName });
-  bizSave();
+  const sale = { id: crypto.randomUUID(), ts: now.getTime(), date: bzISO(now), items, total, paid: salePaid, customerId: custId, customerName: custName };
+  b.sales.push(sale);
+  bizSave(); bzMark("sale", sale.id);
   if (!salePaid && custId) bzAddDebt(custId, items.map((i) => i.qty + " " + i.name).join(", "), total);
   saleCart = []; saleHeard = ""; saleCust = ""; saleNewName = ""; saleNewPhone = ""; salePaid = true;
   render(); buzz(); flash("Sale recorded · " + fmt(total));
@@ -2266,16 +2276,14 @@ function renderSales() {
       <div class="hero-label" style="margin-top:2px;">${todays.length} sale${todays.length === 1 ? "" : "s"}</div>
     </div>
     <div class="biz-body">
-      ${bzMicBtn("sale", "Say what you sold", "saleMic")}
-      <div class="biz-eg">Try: “3 pure water and 2 ice block”</div>
-      ${saleHeard ? `<div class="biz-heard">Heard: “${esc(saleHeard)}”. Check below, then record.</div>` : ""}
-
-      <div class="quickadd-label" style="margin-top:16px;">Your products</div>
-      <div class="quick-row" style="flex-wrap:wrap;margin-top:8px;">
+      <div class="quickadd-label">Tap what you sold</div>
+      <div class="quick-row" style="flex-wrap:wrap;margin-top:8px;align-items:center;">
         ${prodChips}
         <button class="chip chip--ghost" data-b="npToggle">${npOpen ? "Cancel" : "+ New product"}</button>
+        ${bzMicBtn("sale", "Speak", "saleMic")}
       </div>
-      ${!b.products.length && !npOpen ? `<div class="biz-eg" style="text-align:left;">Add your products once (name + price), then just tap to sell. Or say a sale and we'll add them for you.</div>` : ""}
+      ${saleHeard ? `<div class="biz-heard">Heard: “${esc(saleHeard)}”. Check below, then record.</div>` : ""}
+      ${!b.products.length && !npOpen ? `<div class="biz-eg" style="text-align:left;">Add your products once (name + price), then just tap to sell.</div>` : ""}
       ${npOpen ? `<div class="biz-card">
         <div class="stage-form" style="margin:0;gap:10px;">
           <label>Product name<input data-b="npName" data-ev="input" placeholder="e.g. Pure water" value="${esc(npName)}" /></label>
@@ -2287,7 +2295,7 @@ function renderSales() {
         </div></div>` : ""}
 
       <div class="quickadd-label" style="margin-top:18px;">This sale</div>
-      ${saleCart.length ? cart : `<div class="biz-eg" style="text-align:left;">Tap a product above or use the mic.</div>`}
+      ${saleCart.length ? cart : `<div class="biz-eg" style="text-align:left;">Tap a product above to start a sale.</div>`}
 
       ${saleCart.length ? `
       <div class="biz-pay">
@@ -2312,10 +2320,11 @@ function renderSales() {
 function bzOweAdd(name, phone, amount, item) {
   const b = bizData();
   let c = b.creditors.find((x) => x.name.toLowerCase() === name.toLowerCase());
-  if (!c) { c = { id: crypto.randomUUID(), name, phone: phone || "", entries: [] }; b.creditors.push(c); }
-  else if (phone && !c.phone) c.phone = phone;
-  c.entries.push({ id: crypto.randomUUID(), kind: "owe", amount, item: item || "", date: bzISO() });
-  bizSave(); return c;
+  if (!c) { c = { id: crypto.randomUUID(), name, phone: phone || "", entries: [] }; b.creditors.push(c); bzMark("creditor", c.id); }
+  else if (phone && !c.phone) { c.phone = phone; bzMark("creditor", c.id); }
+  const en = { id: crypto.randomUUID(), kind: "owe", amount, item: item || "", date: bzISO() };
+  c.entries.push(en);
+  bizSave(); bzMark("oweentry", en.id); return c;
 }
 function bzOweVoice(text) {
   const names = bizData().creditors.map((c) => c.name);
@@ -2346,7 +2355,6 @@ function renderOwe() {
       <div class="hero-amount">${fmt(bzTotalOwe())}</div>
     </div>
     <div class="biz-body">
-      ${bzMicBtn("owe", "Say it: “I owe Mama Ade 15000 for fish”", "oweMic")}
       ${oweHeard ? `<div class="biz-heard">Heard: “${esc(oweHeard)}”. Check below, then save.</div>` : ""}
       ${oweFormOpen ? `<div class="biz-card">
         <div class="stage-form" style="margin:0;gap:10px;">
@@ -2355,7 +2363,7 @@ function renderOwe() {
           <label>For what <span class="optional">(optional)</span><input data-b="ofItem" data-ev="input" placeholder="e.g. fish, rent, stock" value="${esc(oweForm.item)}" /></label>
           <label>Phone <span class="optional">(optional)</span><input data-b="ofPhone" data-ev="input" type="tel" inputmode="numeric" placeholder="0803…" value="${esc(oweForm.phone)}" /></label>
           <div class="settle-actions"><button class="settle-btn" data-b="ofSave">Save</button><button class="ghost-btn" data-b="ofCancel">Cancel</button></div>
-        </div></div>` : `<button class="ghost-btn" data-b="ofOpen" style="width:100%;justify-content:center;margin-top:10px;">+ Add what I owe, by typing</button>`}
+        </div></div>` : `<div style="display:flex;gap:8px;align-items:center;"><button class="settle-btn" data-b="ofOpen" style="flex:1;">+ Add what I owe</button>${bzMicBtn("owe", "Speak", "oweMic")}</div>`}
       <div class="quickadd-label" style="margin-top:20px;">People you owe</div>
       ${list.length ? rows(list, false) : `<div class="empty"><div class="empty-title">You don't owe anyone</div><div class="empty-sub">Supplier, loan or installment. Add it here so you never forget.</div></div>`}
       ${settled.length ? `<div class="quickadd-label" style="margin-top:20px;">Cleared</div>${rows(settled, true)}` : ""}
@@ -2524,7 +2532,7 @@ const BZ = {
     const b = bizData(), name = npName.trim(), price = Number(npPrice);
     if (!name || !(price > 0)) { flash("Add a name and a price"); return; }
     if (b.products.some((p) => p.name.toLowerCase() === name.toLowerCase())) { flash("You already have " + name); return; }
-    b.products.push({ id: crypto.randomUUID(), name, unit: npUnit, price }); bizSave();
+    const np = { id: crypto.randomUUID(), name, unit: npUnit, price }; b.products.push(np); bizSave(); bzMark("product", np.id);
     npOpen = false; npName = ""; npPrice = ""; render(); flash(name + " added");
   },
   cartPlus: (el) => { const l = bzFind(el.dataset.key); if (l) { l.qty += 1; render(); } },
@@ -2543,7 +2551,7 @@ const BZ = {
   saleRecord: () => bzRecordSale(),
   saleDel: (el) => {
     if (!confirm("Delete this sale? If it was on credit, also remove it from the customer's page.")) return;
-    const b = bizData(); b.sales = b.sales.filter((s) => s.id !== el.dataset.id); bizSave(); render(); flash("Sale deleted");
+    const b = bizData(); b.sales = b.sales.filter((s) => s.id !== el.dataset.id); bizSave(); bzMark("sale", el.dataset.id, true); render(); flash("Sale deleted");
   },
   oweMic: () => bzListen("owe", bzOweVoice),
   ofOpen: () => { oweFormOpen = true; oweHeard = ""; render(); },
@@ -2561,7 +2569,7 @@ const BZ = {
   oweRemove: () => {
     const c = bizData().creditors.find((x) => x.id === oweOpenId); if (!c) return;
     if (!confirm("Remove " + c.name + " and all their records?")) return;
-    const b = bizData(); b.creditors = b.creditors.filter((x) => x.id !== oweOpenId); bizSave(); view = "owe"; render(); flash("Removed");
+    const b = bizData(); c.entries.forEach((e) => bzMark("oweentry", e.id, true)); bzMark("creditor", c.id, true); b.creditors = b.creditors.filter((x) => x.id !== oweOpenId); bizSave(); view = "owe"; render(); flash("Removed");
   },
   opAmt: (el) => { owePayAmt = el.value.replace(/\D/g, ""); },
   opMic: () => bzListen("opay", (t) => { const a = parseSpokenAmount(t); if (a) { owePayAmt = String(a); render(); } else flash("Didn't catch an amount."); }),
@@ -2569,8 +2577,9 @@ const BZ = {
     const c = bizData().creditors.find((x) => x.id === oweOpenId); if (!c) return;
     const amt = Number(owePayAmt), bal = bzCreditorBalance(c);
     if (!(amt > 0)) { flash("Enter the amount you paid"); return; }
-    c.entries.push({ id: crypto.randomUUID(), kind: "pay", amount: Math.min(amt, bal), item: "", date: bzISO() });
-    bizSave(); owePayAmt = ""; render(); buzz(); flash(amt >= bal ? "Fully paid 🎉" : "Payment recorded");
+    const pe = { id: crypto.randomUUID(), kind: "pay", amount: Math.min(amt, bal), item: "", date: bzISO() };
+    c.entries.push(pe);
+    bizSave(); bzMark("oweentry", pe.id); owePayAmt = ""; render(); buzz(); flash(amt >= bal ? "Fully paid 🎉" : "Payment recorded");
   },
   opAll: () => { const c = bizData().creditors.find((x) => x.id === oweOpenId); if (c) { owePayAmt = String(Math.max(0, bzCreditorBalance(c))); BZ.opSave(); } },
   omAmt: (el) => { oweMoreAmt = el.value.replace(/\D/g, ""); }, omItem: (el) => { oweMoreItem = el.value; },
@@ -2578,8 +2587,9 @@ const BZ = {
   omSave: () => {
     const c = bizData().creditors.find((x) => x.id === oweOpenId); const amt = Number(oweMoreAmt);
     if (!c || !(amt > 0)) { flash("Enter an amount"); return; }
-    c.entries.push({ id: crypto.randomUUID(), kind: "owe", amount: amt, item: oweMoreItem.trim(), date: bzISO() });
-    bizSave(); oweMoreAmt = ""; oweMoreItem = ""; render(); buzz(); flash("Added");
+    const me = { id: crypto.randomUUID(), kind: "owe", amount: amt, item: oweMoreItem.trim(), date: bzISO() };
+    c.entries.push(me);
+    bizSave(); bzMark("oweentry", me.id); oweMoreAmt = ""; oweMoreItem = ""; render(); buzz(); flash("Added");
   },
   sumRange: (el) => { sumRange = Number(el.dataset.v); render(); },
   goPro: () => goUpgrade(),
@@ -2603,11 +2613,167 @@ function bzWire() {
         const j = JSON.parse(rd.result), d = j && j.data;
         if (!d || !Array.isArray(d.sales) || !Array.isArray(d.products) || !Array.isArray(d.creditors)) throw new Error("bad");
         if (!confirm("Replace the sales and I-owe data on this phone with this backup?")) return;
-        _biz = { products: d.products, sales: d.sales, creditors: d.creditors }; _bizKey = bizStoreKey(); bizSave(); render(); flash("Backup restored");
+        _biz = { products: d.products, sales: d.sales, creditors: d.creditors }; _bizKey = bizStoreKey(); bizSave(); bzMarkAll(); render(); flash("Backup restored");
       } catch (e) { flash("That file isn't a MyTab backup"); }
     };
     rd.readAsText(f);
   });
+}
+
+/* =====================================================================
+   AUTOMATIC SYNC  (phone <-> server). Local data stays the source of truth
+   so it works offline; changes are pushed as small documents and other
+   phones pick them up within seconds by polling a tiny "rev" counter.
+   ===================================================================== */
+const bzQK = () => "mytab_biz_q_" + (getBusinessId() || "local");
+const bzCK = () => "mytab_biz_cur_" + (getBusinessId() || "local");
+const bzIK = () => "mytab_biz_init_" + (getBusinessId() || "local");
+function bzQ() { try { return JSON.parse(localStorage.getItem(bzQK())) || {}; } catch (e) { return {}; } }
+function bzQSave(q) { try { localStorage.setItem(bzQK(), JSON.stringify(q)); } catch (e) {} }
+function bzQueueLen() { return Object.keys(bzQ()).length; }
+function bzMark(kind, id, deleted) {
+  const q = bzQ(); q[kind + ":" + id] = { kind, id, deleted: !!deleted }; bzQSave(q);
+  updateSyncIndicator(); setTimeout(() => bzTick(true), 50);
+}
+function bzMarkAllQuiet() {
+  const b = bizData(), q = bzQ();
+  b.products.forEach((x) => { q["product:" + x.id] = { kind: "product", id: x.id, deleted: false }; });
+  b.sales.forEach((x) => { q["sale:" + x.id] = { kind: "sale", id: x.id, deleted: false }; });
+  b.creditors.forEach((c) => {
+    q["creditor:" + c.id] = { kind: "creditor", id: c.id, deleted: false };
+    c.entries.forEach((e) => { q["oweentry:" + e.id] = { kind: "oweentry", id: e.id, deleted: false }; });
+  });
+  bzQSave(q);
+}
+function bzMarkAll() { bzMarkAllQuiet(); setTimeout(() => bzTick(true), 50); }
+function bzDocFor(m) {
+  const b = bizData();
+  if (m.deleted) return { id: m.id, kind: m.kind, data: {}, deleted: true };
+  if (m.kind === "product") { const x = b.products.find((p) => p.id === m.id); return x ? { id: x.id, kind: "product", data: { name: x.name, unit: x.unit, price: x.price } } : null; }
+  if (m.kind === "sale") { const x = b.sales.find((p) => p.id === m.id); return x ? { id: x.id, kind: "sale", data: { ts: x.ts, date: x.date, items: x.items, total: x.total, paid: x.paid, customerId: x.customerId, customerName: x.customerName } } : null; }
+  if (m.kind === "creditor") { const x = b.creditors.find((p) => p.id === m.id); return x ? { id: x.id, kind: "creditor", data: { name: x.name, phone: x.phone } } : null; }
+  if (m.kind === "oweentry") {
+    for (const c of b.creditors) { const e = c.entries.find((p) => p.id === m.id); if (e) return { id: e.id, kind: "oweentry", data: { creditorId: c.id, kind: e.kind, amount: e.amount, item: e.item, date: e.date } }; }
+  }
+  return null;
+}
+const BZ_RANK = { creditor: 0, product: 1, oweentry: 2, sale: 3 };
+let bzBusy = false, bzLastRev = null, bzSyncMissing = false, bzRenderTimer = null;
+
+async function bzFlush() {
+  // first sync on this phone: upload whatever was already saved here before sync existed
+  if (!localStorage.getItem(bzIK())) { bzMarkAllQuiet(); try { localStorage.setItem(bzIK(), "1"); } catch (e) {} }
+  const items = Object.values(bzQ()).sort((a, c) => BZ_RANK[a.kind] - BZ_RANK[c.kind]);
+  while (items.length) {
+    const chunk = items.splice(0, 200), docs = chunk.map(bzDocFor).filter(Boolean);
+    if (docs.length) {
+      const r = await apiFetch("/api/sync/docs", { method: "POST", body: JSON.stringify({ docs }) });
+      if (!r.ok) { if (r.status === 404) bzSyncMissing = true; return false; }
+    }
+    const cur = bzQ();
+    chunk.forEach((m) => { if (JSON.stringify(cur[m.kind + ":" + m.id]) === JSON.stringify(m)) delete cur[m.kind + ":" + m.id]; });
+    bzQSave(cur);
+  }
+  updateSyncIndicator();
+  return true;
+}
+
+async function bzPull() {
+  let changed = false, since = Number(localStorage.getItem(bzCK())) || 0;
+  for (let guard = 0; guard < 20; guard++) {
+    const r = await apiFetch("/api/sync/docs?since=" + since, { method: "GET" });
+    if (!r.ok) { if (r.status === 404) bzSyncMissing = true; return changed; }
+    const b = bizData(), q = bzQ(), docs = r.data.docs || [];
+    docs.sort((a, c) => BZ_RANK[a.kind] - BZ_RANK[c.kind] || a.seq - c.seq);
+    for (const d of docs) {
+      if (q[d.kind + ":" + d.id]) continue; // our newer local change is still waiting to go up
+      const x = d.data || {};
+      if (d.kind === "product") {
+        const i = b.products.findIndex((p) => p.id === d.id);
+        if (d.deleted) { if (i >= 0) { b.products.splice(i, 1); changed = true; } }
+        else {
+          const np = { id: d.id, name: x.name, unit: x.unit, price: x.price };
+          if (i >= 0) { if (JSON.stringify(b.products[i]) !== JSON.stringify(np)) { b.products[i] = np; changed = true; } }
+          else { b.products.push(np); changed = true; }
+        }
+      } else if (d.kind === "sale") {
+        const i = b.sales.findIndex((p) => p.id === d.id);
+        if (d.deleted) { if (i >= 0) { b.sales.splice(i, 1); changed = true; } }
+        else {
+          const ns = Object.assign({ id: d.id }, x);
+          if (i >= 0) { if (JSON.stringify(b.sales[i]) !== JSON.stringify(ns)) { b.sales[i] = ns; changed = true; } }
+          else { b.sales.push(ns); changed = true; }
+        }
+      } else if (d.kind === "creditor") {
+        const i = b.creditors.findIndex((p) => p.id === d.id);
+        if (d.deleted) { if (i >= 0) { b.creditors.splice(i, 1); changed = true; } }
+        else if (i >= 0) {
+          if (b.creditors[i].name !== x.name || b.creditors[i].phone !== (x.phone || "")) { b.creditors[i].name = x.name; b.creditors[i].phone = x.phone || ""; changed = true; }
+        } else { b.creditors.push({ id: d.id, name: x.name, phone: x.phone || "", entries: [] }); changed = true; }
+      } else if (d.kind === "oweentry") {
+        for (const c of b.creditors) {
+          const j = c.entries.findIndex((e) => e.id === d.id);
+          if (j >= 0 && (d.deleted || c.id !== x.creditorId)) { c.entries.splice(j, 1); changed = true; }
+        }
+        if (!d.deleted) {
+          let c = b.creditors.find((p) => p.id === x.creditorId);
+          if (!c) { c = { id: x.creditorId, name: "(unknown)", phone: "", entries: [] }; b.creditors.push(c); changed = true; }
+          const ne = { id: d.id, kind: x.kind, amount: x.amount, item: x.item || "", date: x.date };
+          const j = c.entries.findIndex((e) => e.id === d.id);
+          if (j >= 0) { if (JSON.stringify(c.entries[j]) !== JSON.stringify(ne)) { c.entries[j] = ne; changed = true; } }
+          else { c.entries.push(ne); changed = true; }
+        }
+      }
+    }
+    since = r.data.maxSeq || since;
+    try { localStorage.setItem(bzCK(), String(since)); } catch (e) {}
+    if (docs.length) bizSave();
+    if (!r.data.more) break;
+  }
+  return changed;
+}
+
+function bzRenderSoon() {
+  clearTimeout(bzRenderTimer);
+  const go = () => {
+    const a = document.activeElement;
+    if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) { bzRenderTimer = setTimeout(go, 1500); return; } // never yank the keyboard away mid-typing
+    render();
+  };
+  go();
+}
+
+async function bzTick(force) {
+  if (bzBusy || !getToken() || !navigator.onLine || stage !== "app" || document.visibilityState !== "visible") return;
+  if (bzSyncMissing && force !== true) return;
+  bzBusy = true;
+  try {
+    await bzFlush();
+    const r = await apiFetch("/api/sync/rev", { method: "GET" });
+    if (!r.ok) { if (r.status === 404) bzSyncMissing = true; if (r.status === 401) handleAuthExpired(); return; }
+    bzSyncMissing = false;
+    if (r.data.rev !== bzLastRev) {
+      let changed = await bzPull();
+      if (loadQueue().length === 0) {
+        const { debtors: p, error } = await fetchCustomers();
+        if (!error && JSON.stringify(p) !== JSON.stringify(debtors)) { debtors = p; saveDebtors(); changed = true; }
+      }
+      bzLastRev = r.data.rev;
+      if (changed) bzRenderSoon();
+    }
+  } catch (e) { /* offline or server waking up: the next tick tries again */ }
+  finally { bzBusy = false; }
+}
+setInterval(bzTick, 5000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { bzLastRev = null; bzTick(true); } });
+window.addEventListener("online", () => { bzLastRev = null; bzTick(true); });
+setTimeout(() => bzTick(true), 800);
+
+// sync right away whenever the app screen opens (after login, unlock or reload), not on the next timer
+let bzArmed = false;
+function bzAutoStart() {
+  if (stage === "app") { if (!bzArmed) { bzArmed = true; bzLastRev = null; setTimeout(() => bzTick(true), 150); } }
+  else bzArmed = false;
 }
 
     render();
