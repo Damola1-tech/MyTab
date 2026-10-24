@@ -203,6 +203,23 @@
   .biz-blur { filter:blur(4px); opacity:.65; padding:14px; pointer-events:none; }
   .biz-lock-over { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px; background:rgba(255,253,248,.55); }
   .biz-preview { display:block; margin:16px auto 0; background:none; border:none; color:var(--ink-soft); font-size:12px; text-decoration:underline; cursor:pointer; font-family:inherit; }
+
+  .biz-gear { position:absolute; top:14px; right:58px; width:40px; height:40px; border-radius:10px; border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.14); color:#F3EFE1; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:5; }
+  .hero { position:relative; }
+  .biz-plan { margin-left:8px; border:1px solid rgba(255,255,255,.45); background:rgba(255,255,255,.16); color:#fff; border-radius:999px; padding:4px 10px; font-family:inherit; font-size:11.5px; font-weight:800; cursor:pointer; vertical-align:middle; }
+  .biz-plan--pro { background:var(--accent); border-color:var(--accent); color:#2A1D06; }
+  #phone.big .screen { zoom:1.14; }
+  #phone.big .biz-nav-btn { font-size:12.5px; padding:10px 2px 9px; }
+  #phone.big .biz-nav-btn svg { width:26px; height:26px; }
+  #phone.big { padding-bottom:78px; }
+  #phone.big .toast, #phone.has-nav.big .toast { bottom:90px; }
+  #phone.has-nav.big .fab { bottom:94px; }
+  .biz-guide { position:fixed; inset:0; background:rgba(35,48,31,.55); z-index:20; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .biz-guide-card { background:var(--surface); border-radius:20px; padding:22px 20px; width:100%; max-width:380px; max-height:90vh; overflow:auto; }
+  .biz-guide-title { font-family:'Source Serif 4',serif; font-size:24px; font-weight:700; margin-bottom:10px; }
+  .biz-guide-row { display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:16px; }
+  .biz-guide-row b { font-size:17px; }
+  .biz-guide-ico { font-size:28px; width:40px; text-align:center; }
 </style>
 </head>
 <body>
@@ -824,7 +841,8 @@ document.addEventListener("visibilitychange", () => {
       else if (view === "summary") root.innerHTML = renderSummary();
       const showNav = stage === "app" && BZ_NAV_VIEWS.includes(view);
       root.classList.toggle("has-nav", showNav);
-      if (showNav) root.innerHTML += bzNav();
+      root.classList.toggle("big", stage === "app" && bzBigOn());
+      if (showNav) root.innerHTML += bzNav() + bzGuide();
 
       if (stage === "app") root.innerHTML += `<button class="sync-btn" id="syncBtn" aria-label="Refresh"><span class="sync-dot" id="syncDot"></span><span class="sync-ico">↻</span></button>`;
       if (toastMsg) root.innerHTML += `<div class="toast">${esc(toastMsg)}</div>`;
@@ -962,7 +980,7 @@ document.addEventListener("visibilitychange", () => {
       return `
         <div class="screen">
           <div class="hero" style="position:relative;">
-            <div class="brand-name">MyTab <span class="beta-chip">BETA</span></div>
+            <div class="brand-name">MyTab ${bzPlanChip()}</div>
             <div class="hero-label">Total owed to you</div>
             <div class="hero-amount">${fmt(totalOwed)}</div>
             ${bzOweHint()}
@@ -2170,7 +2188,7 @@ function bzNav() {
     owe: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7 7 7-7"/></svg>`,
     summary: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>`,
   };
-  const items = [["home", "Owed to me"], ["sales", "Sales"], ["owe", "I owe"], ["summary", "Summary"]];
+  const items = [["home", "Owe me"], ["sales", "Sales"], ["owe", "I owe"], ["summary", "Summary"]];
   const cur = view === "oweDetail" ? "owe" : view;
   return `<nav class="biz-nav">${items.map(([v, l]) => `<button class="biz-nav-btn${cur === v ? " biz-nav-btn--on" : ""}" data-b="nav" data-v="${v}">${ic[v]}<span>${l}</span></button>`).join("")}</nav>`;
 }
@@ -2270,7 +2288,7 @@ function renderSales() {
     </div>`).join("");
   return `<div class="screen">
     <div class="hero">
-      <div class="brand-name">MyTab <span class="beta-chip">BETA</span></div>
+      ${bzHeroTop()}
       <div class="hero-label">Sold today</div>
       <div class="hero-amount">${fmt(tot)}</div>
       <div class="hero-label" style="margin-top:2px;">${todays.length} sale${todays.length === 1 ? "" : "s"}</div>
@@ -2350,7 +2368,7 @@ function renderOwe() {
     </button>`).join("");
   return `<div class="screen">
     <div class="hero" style="background:#7A3B2E;">
-      <div class="brand-name">MyTab <span class="beta-chip">BETA</span></div>
+      ${bzHeroTop()}
       <div class="hero-label">Total you owe</div>
       <div class="hero-amount">${fmt(bzTotalOwe())}</div>
     </div>
@@ -2473,7 +2491,7 @@ function renderSummary() {
   const net = owed - owe;
   return `<div class="screen">
     <div class="hero">
-      <div class="brand-name">MyTab <span class="beta-chip">BETA</span></div>
+      ${bzHeroTop()}
       <div class="hero-label">Summary</div>
       <div class="hero-amount">${fmt(t)} <span style="font-size:13px;font-weight:600;opacity:.8;">today</span></div>
     </div>
@@ -2503,6 +2521,9 @@ function bzSettingsCard() {
       <div style="font-weight:700;font-size:14.5px;">${waiting ? "Sending your changes…" : "✓ Saved online"}</div>
       <div class="biz-dim" style="font-size:13px;margin-top:4px;">${waiting ? waiting + " change" + (waiting === 1 ? "" : "s") + " will go up as soon as you have network." : "Your sales, customers and what you owe are safe. Log in on any phone and they appear."}</div>
       <button class="ghost-btn" data-b="syncNow" style="margin-top:10px;width:100%;justify-content:center;">Update now</button>
+      <div class="quickadd-label" style="margin-top:16px;">Text size</div>
+      <div class="biz-pay" style="margin-top:8px;"><button class="chip${bzBigOn() ? "" : " chip--active"}" data-b="bigOff">Normal</button><button class="chip${bzBigOn() ? " chip--active" : ""}" data-b="bigOn">Bigger</button></div>
+      <button class="ghost-btn" data-b="guideShow" style="margin-top:10px;width:100%;justify-content:center;">Show the how-to guide</button>
       ${!isPro() ? `<button class="ghost-btn" data-b="togglePreview" style="margin-top:8px;width:100%;justify-content:center;">${bizPro() ? "Turn off Pro preview" : "Preview Pro charts (beta)"}</button>` : ""}
     </div>`;
 }
@@ -2773,6 +2794,37 @@ function bzAutoStart() {
   if (stage === "app") { if (!bzArmed) { bzArmed = true; bzLastRev = null; setTimeout(() => bzTick(true), 150); } }
   else bzArmed = false;
 }
+
+
+/* ---- friendliness: plan chip + settings gear on every tab, big text, first-time guide ---- */
+const bzGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const bzSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const bzBigOn = () => bzGet("mytab_big_text") !== "0";
+function bzPlanChip() { return `<button class="biz-plan${isPro() ? " biz-plan--pro" : ""}" data-b="goPlan">${isPro() ? "PRO ✓" : "FREE ›"}</button>`; }
+function bzHeroTop() {
+  return `<div class="brand-name">MyTab ${bzPlanChip()}</div>
+    <button class="biz-gear" data-b="goSettings" aria-label="Settings">${icon.settings}</button>`;
+}
+function bzGuide() {
+  if (bzGet("mytab_guide_v1") === "1") return "";
+  const row = (e, t, d) => `<div class="biz-guide-row"><div class="biz-guide-ico">${e}</div><div><b>${t}</b><div>${d}</div></div></div>`;
+  return `<div class="biz-guide"><div class="biz-guide-card">
+    <div class="biz-guide-title">Welcome to MyTab 👋</div>
+    ${row("🛒", "Sales", "Tap what you sold. Then press Record.")}
+    ${row("👥", "Owe me", "People who owe you money.")}
+    ${row("⬇️", "I owe", "Money you owe other people.")}
+    ${row("📊", "Summary", "See what sells most and how today compares.")}
+    <button class="primary-btn" data-b="guideDone" style="margin:14px 0 0;width:100%;">OK, let me start</button>
+  </div></div>`;
+}
+Object.assign(BZ, {
+  goPlan: () => { if (isPro()) goSettings(); else goUpgrade(); },
+  goSettings: () => goSettings(),
+  guideDone: () => { bzSet("mytab_guide_v1", "1"); render(); },
+  guideShow: () => { bzSet("mytab_guide_v1", "0"); view = "home"; render(); },
+  bigOn: () => { bzSet("mytab_big_text", "1"); render(); },
+  bigOff: () => { bzSet("mytab_big_text", "0"); render(); },
+});
 
     render();
     refreshFromServerIfIdle();
