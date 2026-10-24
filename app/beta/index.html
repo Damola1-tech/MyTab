@@ -882,7 +882,7 @@ document.addEventListener("visibilitychange", () => {
               ${businessTypes.map((t) => `<option value="${esc(t)}" ${onbType === t ? "selected" : ""}>${esc(t)}</option>`).join("")}
             </select>
           </label>
-          <label>4-digit code <span class="optional">(optional, locks the app on this device)</span>
+          <label>Secret 4-digit code <span class="optional">(so nobody else can open your shop. Remember it!)</span>
             <input id="onbPinInput" type="tel" inputmode="numeric" maxlength="4" placeholder="e.g. 1234" value="${esc(onbPin)}" />
           </label>
           ${onbError ? `<div class="stage-error">${esc(onbError)}</div>` : ""}
@@ -1261,7 +1261,7 @@ document.addEventListener("visibilitychange", () => {
           <div class="quickadd-label">Plan</div>
           <div class="balance-card" style="margin:8px 0 20px; text-align:left;">
             <div style="display:flex; align-items:center; justify-content:space-between;">
-              <span style="font-weight:700; font-size:15.5px;">MyTab ${planLabel}</span>
+              <span style="font-weight:700; font-size:15.5px;">MyTab ${planLabel}${billingStatus && billingStatus.subscriptionStatus === "non_renewing" ? " · ends soon" : ""}</span>
               ${billingStatus && billingStatus.customerLimit != null ? `<span style="font-size:12.5px; color:var(--ink-soft);">${billingStatus.customerCount}/${billingStatus.customerLimit} customers</span>` : ""}
             </div>
             ${isPro()
@@ -1414,7 +1414,7 @@ document.addEventListener("visibilitychange", () => {
     async function handleOnboardingSave() {
       onbError = "";
       if (!onbName.trim()) { onbError = "Enter a business name."; render(); return; }
-      if (onbPin && !/^\d{4}$/.test(onbPin)) { onbError = "The code should be exactly 4 digits, or left blank."; render(); return; }
+      if (!/^\d{4}$/.test(onbPin)) { onbError = "Please choose a secret code of exactly 4 numbers, for example 4821."; render(); return; }
 
       if (!navigator.onLine) {
         onbError = "You need an internet connection to set up your business the first time. Connect and try again.";
@@ -2497,16 +2497,13 @@ function renderSummary() {
 
 /* =========================== BACKUP / SETTINGS =========================== */
 function bzSettingsCard() {
-  const b = bizData();
-  return `<div class="quickadd-label">Sales & I-owe data (beta)</div>
+  const waiting = bzQueueLen() + loadQueue().length;
+  return `<div class="quickadd-label">Your records</div>
     <div class="balance-card" style="margin:8px 0 20px;text-align:left;">
-      <div class="biz-dim" style="font-size:13px;">Saved on this phone only (${b.sales.length} sales, ${b.products.length} products, ${b.creditors.length} people you owe). Back it up so you never lose it.</div>
-      <div class="settle-actions" style="margin-top:10px;">
-        <button class="settle-btn" data-b="bkExport">Back up</button>
-        <button class="ghost-btn" data-b="bkImport">Restore</button>
-      </div>
-      <input type="file" id="bkFile" accept="application/json,.json" style="display:none" />
-      ${!isPro() ? `<button class="ghost-btn" data-b="togglePreview" style="margin-top:10px;width:100%;justify-content:center;">${bizPro() ? "Turn off Pro preview" : "Preview Pro charts (beta)"}</button>` : ""}
+      <div style="font-weight:700;font-size:14.5px;">${waiting ? "Sending your changes…" : "✓ Saved online"}</div>
+      <div class="biz-dim" style="font-size:13px;margin-top:4px;">${waiting ? waiting + " change" + (waiting === 1 ? "" : "s") + " will go up as soon as you have network." : "Your sales, customers and what you owe are safe. Log in on any phone and they appear."}</div>
+      <button class="ghost-btn" data-b="syncNow" style="margin-top:10px;width:100%;justify-content:center;">Update now</button>
+      ${!isPro() ? `<button class="ghost-btn" data-b="togglePreview" style="margin-top:8px;width:100%;justify-content:center;">${bizPro() ? "Turn off Pro preview" : "Preview Pro charts (beta)"}</button>` : ""}
     </div>`;
 }
 function bzDownload(name, text, type) {
@@ -2596,6 +2593,7 @@ const BZ = {
   togglePreview: () => { let on = false; try { on = localStorage.getItem(BIZ_PREVIEW_KEY) === "1"; localStorage.setItem(BIZ_PREVIEW_KEY, on ? "0" : "1"); } catch (e) {} render(); flash(on ? "Pro preview off" : "Pro preview on (beta only)"); },
   salesCsv: () => { if (!bizPro()) { goUpgrade(); return; } bzSalesCsv(); },
   bkExport: () => bzDownload("mytab-backup-" + bzISO() + ".json", JSON.stringify({ app: "mytab-biz", version: 1, businessId: getBusinessId(), exportedAt: new Date().toISOString(), data: bizData() }), "application/json"),
+  syncNow: () => { bzLastRev = null; bzTick(true); flash("Updating…"); },
   bkImport: () => { const f = document.getElementById("bkFile"); if (f) f.click(); },
 };
 function bzWire() {
