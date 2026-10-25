@@ -220,6 +220,7 @@
   .biz-guide-row { display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:16px; }
   .biz-guide-row b { font-size:17px; }
   .biz-guide-ico { font-size:28px; width:40px; text-align:center; }
+  .biz-owehint--good { color:#BFE8CB; }
 </style>
 </head>
 <body>
@@ -1036,6 +1037,7 @@ document.addEventListener("visibilitychange", () => {
             <div class="balance-label">Balance owed</div>
             <div class="balance-amount${bal === 0 ? " balance-amount--clear" : ""}">${fmt(bal)}</div>
             ${waLink ? `<a class="wa-btn" href="${waLink}" target="_blank" rel="noreferrer">${icon.wa} Send reminder</a>` : ""}
+            <button class="wa-btn" data-b="shareStmt" style="margin-top:8px; border:none; cursor:pointer; font-family:inherit;">🔗 Send balance link</button>
             ${d.birthday ? `<div class="stage-hint" style="margin-top:8px;">🎂 Birthday: ${esc(d.birthday)}</div>` : ""}
           </div>
           <div class="entries">${entries}</div>
@@ -1254,6 +1256,7 @@ document.addEventListener("visibilitychange", () => {
             </label>
             ${upgradeError ? `<div class="stage-error">${esc(upgradeError)}</div>` : ""}
           </div>
+          ${bzPrepaidBlock()}
         </div>
         <button class="primary-btn" id="upgradeSubscribeBtn" ${upgradeBusy ? "disabled" : ""}>${upgradeBusy ? "Starting checkout…" : "Continue to payment"}</button>
         <button class="ghost-btn" id="upgradeRefreshBtn" style="margin:0 18px 18px;">Already paid? Refresh status</button>
@@ -1279,12 +1282,12 @@ document.addEventListener("visibilitychange", () => {
           <div class="quickadd-label">Plan</div>
           <div class="balance-card" style="margin:8px 0 20px; text-align:left;">
             <div style="display:flex; align-items:center; justify-content:space-between;">
-              <span style="font-weight:700; font-size:15.5px;">MyTab ${planLabel}${billingStatus && billingStatus.subscriptionStatus === "non_renewing" ? " · ends soon" : ""}</span>
+              <span style="font-weight:700; font-size:15.5px;">MyTab ${planLabel}${bzPlanSuffix()}</span>
               ${billingStatus && billingStatus.customerLimit != null ? `<span style="font-size:12.5px; color:var(--ink-soft);">${billingStatus.customerCount}/${billingStatus.customerLimit} customers</span>` : ""}
             </div>
-            ${isPro()
+            ${(isPro() && !bzPrepaid())
               ? `<button class="ghost-btn" id="manageSubBtn" style="margin-top:12px; width:100%; justify-content:center;" ${manageLinkBusy ? "disabled" : ""}>${manageLinkBusy ? "Loading…" : "Manage subscription"}</button>`
-              : `<button class="settle-btn" id="settingsUpgradeBtn" style="margin-top:12px; width:100%;">Upgrade to Pro</button>`}
+              : `<button class="settle-btn" id="settingsUpgradeBtn" style="margin-top:12px; width:100%;">${bzPrepaid() ? "Extend Pro" : "Upgrade to Pro"}</button>`}
           </div>
 
           <div class="quickadd-label">Reports & export</div>
@@ -2150,7 +2153,12 @@ function bzTopCustomers(dates) {
 }
 const bzCreditorBalance = (c) => c.entries.reduce((a, e) => a + (e.kind === "pay" ? -e.amount : e.amount), 0);
 const bzTotalOwe = () => bizData().creditors.reduce((a, c) => a + Math.max(0, bzCreditorBalance(c)), 0);
-function bzOweHint() { const t = bzTotalOwe(); return t > 0 ? `<div class="biz-owehint">You owe ${fmt(t)}</div>` : ""; }
+function bzOweHint() {
+  const t = bzTotalOwe(); let h = "";
+  if (bzStats && bzStats.recoveredMonth > 0) h += `<div class="biz-owehint biz-owehint--good">Got back this month: ${fmt(bzStats.recoveredMonth)}</div>`;
+  if (t > 0) h += `<div class="biz-owehint">You owe ${fmt(t)}</div>`;
+  return h;
+}
 
 /* ---- UI state ---- */
 let saleCart = [], salePaid = true, saleCust = "", saleNewName = "", saleNewPhone = "", saleHeard = "";
@@ -2497,7 +2505,8 @@ function renderSummary() {
       <div class="hero-amount">${fmt(t)} <span style="font-size:13px;font-weight:600;opacity:.8;">today</span></div>
     </div>
     <div class="biz-body">
-      <div class="biz-grid">
+      ${bzRecoveredCard()}
+      <div class="biz-grid" style="margin-top:12px;">
         <div class="biz-stat"><div class="biz-dim">Yesterday</div><b>${fmt(y)}</b>${diff !== null ? `<div style="font-size:11.5px;font-weight:700;color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff)}% today</div>` : ""}</div>
         <div class="biz-stat"><div class="biz-dim">Last 7 days</div><b>${fmt(w)}</b></div>
         <div class="biz-stat"><div class="biz-dim">Owed to you</div><b style="color:var(--green)">${fmt(owed)}</b></div>
@@ -2517,7 +2526,7 @@ function renderSummary() {
 /* =========================== BACKUP / SETTINGS =========================== */
 function bzSettingsCard() {
   const waiting = bzQueueLen() + loadQueue().length;
-  return `<div class="quickadd-label">Your records</div>
+  return bzPayCard() + `<div class="quickadd-label">Your records</div>
     <div class="balance-card" style="margin:8px 0 20px;text-align:left;">
       <div style="font-weight:700;font-size:14.5px;">${waiting ? "Sending your changes…" : "✓ Saved online"}</div>
       <div class="biz-dim" style="font-size:13px;margin-top:4px;">${waiting ? waiting + " change" + (waiting === 1 ? "" : "s") + " will go up as soon as you have network." : "Your sales, customers and what you owe are safe. Log in on any phone and they appear."}</div>
@@ -2774,6 +2783,7 @@ async function bzTick(force) {
     bzSyncMissing = false;
     if (r.data.rev !== bzLastRev) {
       let changed = await bzPull();
+      if (await bzLoadStats()) changed = true;
       if (loadQueue().length === 0) {
         const { debtors: p, error } = await fetchCustomers();
         if (!error && JSON.stringify(p) !== JSON.stringify(debtors)) { debtors = p; saveDebtors(); changed = true; }
@@ -2825,6 +2835,84 @@ Object.assign(BZ, {
   guideShow: () => { bzSet("mytab_guide_v1", "0"); view = "home"; render(); },
   bigOn: () => { bzSet("mytab_big_text", "1"); render(); },
   bigOff: () => { bzSet("mytab_big_text", "0"); render(); },
+});
+
+
+/* ---- money recovered, customer balance link, pay-info, prepaid plans ---- */
+let bzStats = null, bzPayInfo = null, bzPayLoading = false, bzPayDraft = "";
+async function bzLoadStats() {
+  const r = await apiFetch("/api/sync/stats", { method: "GET" });
+  if (r.ok && JSON.stringify(r.data) !== JSON.stringify(bzStats)) { bzStats = r.data; return true; }
+  return false;
+}
+function bzRecoveredCard() {
+  const s = bzStats; if (!s) return "";
+  return `<div class="biz-card" style="margin-top:0;background:#E1EEE3;border-color:#C9DECF;">
+    <div class="biz-dim">Money you got back this month</div>
+    <div style="font-size:28px;font-weight:800;color:var(--green);">${fmt(s.recoveredMonth)}</div>
+    <div class="biz-dim">${fmt(s.recoveredToday)} today</div>
+    ${s.overduePeople > 0 ? `<button class="settle-btn" data-b="goOverdue" style="margin-top:10px;width:100%;background:var(--red);">${fmt(s.overdueTotal)} overdue from ${s.overduePeople} ${s.overduePeople === 1 ? "person" : "people"} · Remind them</button>` : ""}
+  </div>`;
+}
+function bzPayCard() {
+  if (bzPayInfo === null && !bzPayLoading && getToken()) {
+    bzPayLoading = true;
+    apiFetch("/auth/me", { method: "GET" }).then((r) => {
+      bzPayLoading = false; bzPayInfo = r.ok ? ((r.data.business && r.data.business.pay_info) || "") : ""; bzPayDraft = bzPayInfo;
+      if (view === "settings") bzRenderSoon();
+    });
+  }
+  return `<div class="quickadd-label">How customers pay you</div>
+    <div class="balance-card" style="margin:8px 0 20px;text-align:left;">
+      <div class="biz-dim" style="font-size:13px;">Shown on the balance link you send customers. Example: GTBank 0123456789, Mama Ade Stores</div>
+      <input class="biz-full" data-b="payInfoIn" data-ev="input" placeholder="Bank, account number, account name" value="${esc(bzPayDraft)}" />
+      <button class="settle-btn" data-b="payInfoSave" style="width:100%;margin-top:8px;">Save</button>
+    </div>`;
+}
+const bzPrepaid = () => !!(billingStatus && billingStatus.subscriptionStatus === "prepaid" && isPro());
+function bzPlanSuffix() {
+  const st = billingStatus && billingStatus.subscriptionStatus;
+  if (st === "non_renewing") return " · ends soon";
+  if (st === "prepaid" && billingStatus.proUntil) return " · until " + new Date(billingStatus.proUntil).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
+  return "";
+}
+function bzPrepaidBlock() {
+  const opt = (m, label, price) => `<button class="chip" data-b="prepaid" data-v="${m}" ${upgradeBusy ? "disabled" : ""}><b>${label}</b><br><span class="biz-dim">${price}</span></button>`;
+  return `<div class="biz-card" style="margin-top:16px;">
+    <div style="font-weight:800;font-size:14.5px;">No card? Pay once instead</div>
+    <div class="biz-dim" style="margin:4px 0 10px;">Pay by bank transfer, USSD or card. No monthly debit. Pro stays on until the date, then returns to free by itself.</div>
+    <div class="quick-row" style="flex-wrap:wrap;">${opt(3, "3 months", "₦3,000")}${opt(6, "6 months", "₦5,500")}${opt(12, "12 months", "₦10,000")}</div>
+  </div>`;
+}
+Object.assign(BZ, {
+  goOverdue: () => { view = "home"; tab = "today"; window.scrollTo(0, 0); render(); },
+  payInfoIn: (el) => { bzPayDraft = el.value; },
+  payInfoSave: async () => {
+    const r = await apiFetch("/auth/pay-info", { method: "POST", body: JSON.stringify({ payInfo: bzPayDraft }) });
+    if (r.ok) { bzPayInfo = r.data.payInfo; flash("Saved"); } else flash("Couldn't save. Check your network.");
+  },
+  prepaid: async (el) => {
+    upgradeError = "";
+    if (!upgradeEmail || !upgradeEmail.includes("@")) { upgradeError = "Enter your email above first, for the receipt."; render(); return; }
+    upgradeBusy = true; render();
+    const r = await apiFetch("/billing/prepaid", { method: "POST", body: JSON.stringify({ months: Number(el.dataset.v), email: upgradeEmail }) });
+    upgradeBusy = false;
+    if (!r.ok) { upgradeError = r.error || "Couldn't start checkout, try again."; render(); return; }
+    window.location.href = r.data.authorizationUrl;
+  },
+  shareStmt: async () => {
+    const d = debtors.find((x) => x.id === selectedId); if (!d) return;
+    if (!navigator.onLine) { flash("You need internet to make the link."); return; }
+    flash("Making the link…");
+    if (loadQueue().length) await drainQueue();
+    const r = await apiFetch("/api/customers/" + resolveId(d.id) + "/share", { method: "POST" });
+    if (!r.ok) { flash(r.status === 404 ? "Still saving this customer. Try again in a moment." : "Couldn't make the link. Try again."); return; }
+    const url = new URL("../s/?t=" + r.data.token, location.href).href;
+    const msg = "Hi " + d.name + ", here is your balance with " + (getBusinessMeta().name || "the shop") + ": " + url;
+    if (d.phone) { window.location.href = "https://wa.me/234" + d.phone.replace(/^0/, "") + "?text=" + encodeURIComponent(msg); return; }
+    if (navigator.share) { try { await navigator.share({ text: msg }); return; } catch (e) {} }
+    try { await navigator.clipboard.writeText(msg); flash("Link copied. Paste it anywhere."); } catch (e) { prompt("Copy this link:", msg); }
+  },
 });
 
     render();
