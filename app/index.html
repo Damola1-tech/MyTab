@@ -344,7 +344,9 @@
     function saveQueue(q) {
       try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch (e) {}
     }
+    let enqueueCount = 0;
     function enqueue(op) {
+      enqueueCount++;
       const q = loadQueue();
       q.push(op);
       saveQueue(q);
@@ -555,8 +557,10 @@ document.addEventListener("visibilitychange", () => {
     async function refreshFromServerIfIdle() {
       if (!getToken() || !navigator.onLine) return;
       if (loadQueue().length > 0) return;
+      const c0 = enqueueCount;
       const { debtors: pulled, error } = await fetchCustomers();
       if (error) return;
+      if (enqueueCount !== c0 || loadQueue().length > 0) return; // stale: user changed something meanwhile
       debtors = pulled;
       saveDebtors();
       if (stage === "app") render();
@@ -1036,8 +1040,7 @@ document.addEventListener("visibilitychange", () => {
           <div class="balance-card">
             <div class="balance-label">Balance owed</div>
             <div class="balance-amount${bal === 0 ? " balance-amount--clear" : ""}">${fmt(bal)}</div>
-            ${waLink ? `<a class="wa-btn" href="${waLink}" target="_blank" rel="noreferrer">${icon.wa} Send reminder</a>` : ""}
-            <button class="wa-btn" data-b="shareStmt" style="margin-top:8px; border:none; cursor:pointer; font-family:inherit;">🔗 Send balance link</button>
+            <button class="wa-btn" data-b="shareStmt" style="border:none; cursor:pointer; font-family:inherit;">${icon.wa} Send reminder</button>
             ${d.birthday ? `<div class="stage-hint" style="margin-top:8px;">🎂 Birthday: ${esc(d.birthday)}</div>` : ""}
           </div>
           <div class="entries">${entries}</div>
@@ -2786,7 +2789,9 @@ async function bzTick(force) {
       let changed = await bzPull();
       if (await bzLoadStats()) changed = true;
       if (loadQueue().length === 0) {
+        const c0 = enqueueCount;
         const { debtors: p, error } = await fetchCustomers();
+        if (enqueueCount !== c0 || loadQueue().length > 0) { bzLastRev = null; return; } // something was added while this downloaded: the list is stale, try again next tick
         if (!error && JSON.stringify(p) !== JSON.stringify(debtors)) { debtors = p; saveDebtors(); changed = true; }
       }
       bzLastRev = r.data.rev;
@@ -2903,13 +2908,17 @@ Object.assign(BZ, {
   },
   shareStmt: async () => {
     const d = debtors.find((x) => x.id === selectedId); if (!d) return;
-    if (!navigator.onLine) { flash("You need internet to make the link."); return; }
-    flash("Making the link…");
+    const plain = () => { if (d.phone) window.location.href = "https://wa.me/234" + d.phone.replace(/^0/, "") + "?text=" + encodeURIComponent("Hi " + d.name + ", a gentle reminder: you currently owe " + fmt(balanceOf(d)) + " to " + (getBusinessMeta().name || "the shop") + ". Thank you!"); else flash("Add this customer's phone number first."); };
+    if (!navigator.onLine) { plain(); return; }
+    flash("Opening WhatsApp…");
     if (loadQueue().length) await drainQueue();
     const r = await apiFetch("/api/customers/" + resolveId(d.id) + "/share", { method: "POST" });
-    if (!r.ok) { flash(r.status === 404 ? "Still saving this customer. Try again in a moment." : "Couldn't make the link. Try again."); return; }
+    if (!r.ok) { plain(); return; }
     const url = new URL("../s/?t=" + r.data.token, location.href).href;
-    const msg = "Hi " + d.name + ", here is your balance with " + (getBusinessMeta().name || "the shop") + ": " + url;
+    const shop = getBusinessMeta().name || "the shop", owe = balanceOf(d);
+    const msg = owe > 0
+      ? "Hi " + d.name + ", a gentle reminder: you currently owe " + fmt(owe) + " to " + shop + ". See the details and how to pay here: " + url + " Thank you!"
+      : "Hi " + d.name + ", here is your balance with " + shop + ": " + url;
     if (d.phone) { window.location.href = "https://wa.me/234" + d.phone.replace(/^0/, "") + "?text=" + encodeURIComponent(msg); return; }
     if (navigator.share) { try { await navigator.share({ text: msg }); return; } catch (e) {} }
     try { await navigator.clipboard.writeText(msg); flash("Link copied. Paste it anywhere."); } catch (e) { prompt("Copy this link:", msg); }
