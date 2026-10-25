@@ -2534,6 +2534,7 @@ function bzSettingsCard() {
       <div class="quickadd-label" style="margin-top:16px;">Text size</div>
       <div class="biz-pay" style="margin-top:8px;"><button class="chip${bzBigOn() ? "" : " chip--active"}" data-b="bigOff">Normal</button><button class="chip${bzBigOn() ? " chip--active" : ""}" data-b="bigOn">Bigger</button></div>
       <button class="ghost-btn" data-b="guideShow" style="margin-top:10px;width:100%;justify-content:center;">Show the how-to guide</button>
+      <button class="ghost-btn" data-b="deleteAccount" style="margin-top:18px;width:100%;justify-content:center;color:var(--red);border-color:var(--red-bg);">Delete my account</button>
       ${!isPro() && BZ_BETA ? `<button class="ghost-btn" data-b="togglePreview" style="margin-top:8px;width:100%;justify-content:center;">${bizPro() ? "Turn off Pro preview" : "Preview Pro charts (beta)"}</button>` : ""}
     </div>`;
 }
@@ -2914,6 +2915,27 @@ Object.assign(BZ, {
     try { await navigator.clipboard.writeText(msg); flash("Link copied. Paste it anywhere."); } catch (e) { prompt("Copy this link:", msg); }
   },
 });
+
+
+/* ---- delete account (required by the app stores) + offline start ---- */
+Object.assign(BZ, {
+  deleteAccount: async () => {
+    if (!navigator.onLine) { flash("You need internet to delete your account."); return; }
+    if (!confirm("Delete your MyTab account?\n\nThis permanently removes your shop, customers, sales and everything you owe. It cannot be undone.")) return;
+    const word = prompt('To confirm, type DELETE');
+    if (word !== "DELETE") { flash("Nothing was deleted."); return; }
+    const meta = getBusinessMeta();
+    let pin = "";
+    if (meta.pin) { pin = prompt("Enter your 4-digit secret code") || ""; }
+    const r = await apiFetch("/auth/delete-account", { method: "POST", body: JSON.stringify({ confirm: "DELETE", pin }) });
+    if (!r.ok) { alert(r.error || "Couldn't delete your account. Try again."); return; }
+    try { Object.keys(localStorage).filter((k) => k.indexOf("mytab_") === 0).forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+    _biz = null; _bizKey = null; bzStats = null; bzPayInfo = null; bzLastRev = null;
+    handleLogout();
+    alert("Your account has been deleted.");
+  },
+});
+if ("serviceWorker" in navigator) { window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); }); }
 
     render();
     refreshFromServerIfIdle();
