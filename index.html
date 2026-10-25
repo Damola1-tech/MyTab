@@ -94,6 +94,15 @@
   .trust h2 { font-family:'Source Serif 4',serif; font-weight:700; font-size:24px; margin:0 0 12px; }
   .trust p { font-size:15px; color:rgba(243,239,225,0.85); max-width:58ch; margin:0; line-height:1.6; }
 
+  .wl { background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:30px 24px; max-width:520px; margin:10px auto 0; text-align:center; }
+  .wl h2 { font-family:'Source Serif 4',serif; font-weight:700; font-size:26px; margin:0 0 8px; }
+  .wl p { color:var(--ink-soft); font-size:15px; margin:0 0 18px; }
+  .wl form { display:flex; flex-direction:column; gap:10px; text-align:left; }
+  .wl input, .wl select { border:1px solid var(--line); border-radius:10px; padding:13px; font-size:16px; font-family:inherit; color:var(--ink); background:var(--bg); width:100%; }
+  .wl button { background:var(--primary); color:#F3EFE1; border:none; font-weight:700; font-size:16px; padding:15px; border-radius:12px; cursor:pointer; font-family:inherit; }
+  .wl button[disabled] { opacity:.6; }
+  .wl-msg { font-size:14px; min-height:20px; text-align:center; }
+  .wl-msg--err { color:#B3382B; } .wl-msg--ok { color:var(--primary); font-weight:700; }
   .final-cta { text-align:center; padding:70px 0 50px; }
   .final-cta h2 { font-family:'Source Serif 4',serif; font-weight:700; font-size:30px; margin:0 0 18px; }
 
@@ -264,6 +273,23 @@
       </div>
     </section>
 
+    <section id="waitlist">
+      <div class="wl">
+        <h2>Join the early list</h2>
+        <p>Be first to hear about new features and the Android app, and get help setting up your shop. We'll message you on WhatsApp, never spam.</p>
+        <form id="wlForm" novalidate>
+          <input id="wlName" type="text" placeholder="Your name" autocomplete="name" maxlength="80" />
+          <input id="wlPhone" type="tel" inputmode="numeric" placeholder="WhatsApp number (0803…)" autocomplete="tel" maxlength="20" />
+          <select id="wlType">
+            <option value="">What do you sell? (optional)</option>
+            <option>Provisions / supermarket</option><option>Pure water / drinks / ice block</option><option>Food / restaurant</option><option>Fashion / tailoring</option><option>Pharmacy / chemist</option><option>Building materials / hardware</option><option>Phones / electronics</option><option>Other</option>
+          </select>
+          <button type="submit" id="wlBtn">Add me to the list</button>
+          <div class="wl-msg" id="wlMsg" role="status"></div>
+        </form>
+      </div>
+    </section>
+
     <section class="final-cta">
       <h2>Start your tab today</h2>
       <a class="btn-primary" href="app/">Open MyTab</a>
@@ -318,5 +344,23 @@
     </footer>
   </div>
 
+<script>
+(function () {
+  var f = document.getElementById("wlForm"); if (!f) return;
+  var msg = document.getElementById("wlMsg"), btn = document.getElementById("wlBtn");
+  function say(t, ok) { msg.textContent = t; msg.className = "wl-msg " + (ok ? "wl-msg--ok" : "wl-msg--err"); }
+  f.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = document.getElementById("wlName").value.trim(), phone = document.getElementById("wlPhone").value.replace(/[\s-]/g, "");
+    if (!name) return say("Please enter your name.", false);
+    if (!/^(\+?234|0)\d{10}$/.test(phone)) return say("Enter a Nigerian phone number, like 0803 123 4567.", false);
+    btn.disabled = true; say("Adding you…", true);
+    fetch("https://mytab-backend-ch5s.onrender.com/public/waitlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, phone: phone, shopType: document.getElementById("wlType").value }) })
+      .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, b: b }; }); })
+      .then(function (x) { btn.disabled = false; if (x.ok) { f.reset(); say("You're on the list ✓ We'll message you on WhatsApp.", true); } else say((x.b && x.b.error) || "Something went wrong, try again.", false); })
+      .catch(function () { btn.disabled = false; say("Couldn't reach the server. Check your network and try again.", false); });
+  });
+})();
+</script>
 </body>
 </html>
