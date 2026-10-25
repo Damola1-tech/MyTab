@@ -277,6 +277,7 @@
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(QUEUE_KEY);
       localStorage.removeItem(ID_MAP_KEY);
+      localStorage.removeItem("mytab_role"); localStorage.removeItem("mytab_staff_name");
     }
 
     let BUSINESS_ID = getBusinessId(); // may be null until onboarding/login completes
@@ -567,10 +568,11 @@ document.addEventListener("visibilitychange", () => {
     }
 
     function handleAuthExpired() {
+      const wasStaff = localStorage.getItem("mytab_role") === "staff";
       clearSession();
-      stage = "splash";
+      stage = "login";
       loginIdentifier = ""; loginPin = ""; needsLoginPin = false;
-      loginError = "Your session expired, log in again.";
+      loginError = wasStaff ? "You have been signed out. Ask the shop owner if your access was removed." : "Your session expired, log in again.";
       render();
     }
 
@@ -723,7 +725,7 @@ document.addEventListener("visibilitychange", () => {
       view = "greetings"; render();
     }
     function goUpgrade() { view = "upgrade"; render(); }
-    function goSettings() { settingsPinInput = ""; settingsPinError = ""; view = "settings"; render(); }
+    function goSettings() { if (localStorage.getItem("mytab_role") === "staff") { view = "staffme"; render(); return; } settingsPinInput = ""; settingsPinError = ""; view = "settings"; render(); }
     function goReports() {
       if (!isPro()) { view = "upgrade"; render(); return; }
       view = "reports"; render();
@@ -830,6 +832,7 @@ document.addEventListener("visibilitychange", () => {
       const root = document.getElementById("phone");
       if (stage === "splash") root.innerHTML = renderSplash();
       else if (stage === "login") root.innerHTML = renderLogin();
+      else if (stage === "staffLogin") root.innerHTML = renderStaffLogin();
       else if (stage === "onboarding") root.innerHTML = renderOnboarding();
       else if (stage === "pinlock") root.innerHTML = renderPinlock();
       else if (view === "home") root.innerHTML = renderHome();
@@ -840,6 +843,8 @@ document.addEventListener("visibilitychange", () => {
       else if (view === "upgrade") root.innerHTML = renderUpgrade();
       else if (view === "settings") root.innerHTML = renderSettings();
       else if (view === "reports") root.innerHTML = renderReports();
+      else if (view === "staffme") root.innerHTML = renderStaffMe();
+      else if (view === "staffmgr") root.innerHTML = renderStaffMgr();
       else if (view === "sales") root.innerHTML = renderSales();
       else if (view === "owe") root.innerHTML = renderOwe();
       else if (view === "oweDetail") root.innerHTML = renderOweDetail();
@@ -888,6 +893,7 @@ document.addEventListener("visibilitychange", () => {
           </div>
         </div>
         <button class="primary-btn" id="loginContinueBtn" ${loginBusy ? "disabled" : ""}>${loginBusy ? "Checking…" : "Continue"}</button>
+        <button class="ghost-btn" data-b="slOpen" style="margin:10px 18px 18px;justify-content:center;">I work in a shop (attendant)</button>
       </div>`;
     }
 
@@ -986,8 +992,8 @@ document.addEventListener("visibilitychange", () => {
         <div class="screen">
           <div class="hero" style="position:relative;">
             <div class="brand-name">MyTab ${bzPlanChip()}</div>
-            <div class="hero-label">Total owed to you</div>
-            <div class="hero-amount">${fmt(totalOwed)}</div>
+            <div class="hero-label">${bzIsStaff() ? "Signed in as" : "Total owed to you"}</div>
+            <div class="hero-amount">${bzIsStaff() ? esc(bzGet("mytab_staff_name") || "") : fmt(totalOwed)}</div>
             ${bzOweHint()}
             <button class="iconbtn" id="greetingsBtn" style="position:absolute; top:20px; right:18px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.wa}</button>
             ${!isStandalone() ? `<button class="iconbtn" id="installBtn" style="position:absolute; top:20px; right:64px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.install}</button>` : ""}
@@ -1032,8 +1038,8 @@ document.addEventListener("visibilitychange", () => {
             <button class="iconbtn" id="backBtn">${icon.back}</button>
             <div class="topbar-title">${esc(d.name)}</div>
             <div style="display:flex; gap:6px;">
-              <button class="iconbtn" id="editCustomerBtn">${icon.pencil}</button>
-              <button class="iconbtn iconbtn--danger" id="removeDebtorBtn">${icon.trash}</button>
+              ${bzIsStaff() ? "" : `<button class="iconbtn" id="editCustomerBtn">${icon.pencil}</button>`}
+              ${bzIsStaff() ? "" : `<button class="iconbtn iconbtn--danger" id="removeDebtorBtn">${icon.trash}</button>`}
             </div>
           </div>
           ${editingCustomer ? editCustomerHtml(d) : ""}
@@ -1104,8 +1110,8 @@ document.addEventListener("visibilitychange", () => {
             ${tag}
           </div>
           <div class="entry-icons">
-            <button class="entry-icon-btn" data-edit-entry="${e.id}">${icon.pencil}</button>
-            <button class="entry-icon-btn entry-icon-btn--danger" data-delete-mode="${e.id}">${icon.trashSm}</button>
+            ${bzIsStaff() ? "" : `<button class="entry-icon-btn" data-edit-entry="${e.id}">${icon.pencil}</button>
+            <button class="entry-icon-btn entry-icon-btn--danger" data-delete-mode="${e.id}">${icon.trashSm}</button>`}
           </div>
         </div>
         ${panel}
@@ -2157,6 +2163,7 @@ function bzTopCustomers(dates) {
 const bzCreditorBalance = (c) => c.entries.reduce((a, e) => a + (e.kind === "pay" ? -e.amount : e.amount), 0);
 const bzTotalOwe = () => bizData().creditors.reduce((a, c) => a + Math.max(0, bzCreditorBalance(c)), 0);
 function bzOweHint() {
+  if (bzIsStaff()) return "";
   const t = bzTotalOwe(); let h = "";
   if (bzStats && bzStats.recoveredMonth > 0) h += `<div class="biz-owehint biz-owehint--good">Got back this month: ${fmt(bzStats.recoveredMonth)}</div>`;
   if (t > 0) h += `<div class="biz-owehint">You owe ${fmt(t)}</div>`;
@@ -2192,7 +2199,7 @@ const bzHasVoice = () => !!(window.SpeechRecognition || window.webkitSpeechRecog
 const bzMicBtn = (key, label, act) => !bzHasVoice() ? "" : `<button class="biz-mic${bizMic === key ? " biz-mic--on" : ""}" data-b="${act}">${icon.mic}<span>${bizMic === key ? "Listening… speak now" : label}</span></button>`;
 
 /* ---- bottom navigation ---- */
-const BZ_NAV_VIEWS = ["home", "sales", "owe", "summary"];
+const BZ_NAV_VIEWS = ["home", "sales", "owe", "summary", "staffme"];
 function bzNav() {
   const ic = {
     home: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
@@ -2200,7 +2207,7 @@ function bzNav() {
     owe: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7 7 7-7"/></svg>`,
     summary: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>`,
   };
-  const items = [["home", "Owe me"], ["sales", "Sales"], ["owe", "I owe"], ["summary", "Summary"]];
+  const items = bzIsStaff() ? [["home", "Owe me"], ["sales", "Sales"]] : [["home", "Owe me"], ["sales", "Sales"], ["owe", "I owe"], ["summary", "Summary"]];
   const cur = view === "oweDetail" ? "owe" : view;
   return `<nav class="biz-nav">${items.map(([v, l]) => `<button class="biz-nav-btn${cur === v ? " biz-nav-btn--on" : ""}" data-b="nav" data-v="${v}">${ic[v]}<span>${l}</span></button>`).join("")}</nav>`;
 }
@@ -2259,7 +2266,7 @@ function bzRecordSale() {
   const items = saleCart.map((l) => ({ productId: l.productId, name: l.name, qty: Number(l.qty), unitPrice: Number(l.unitPrice) }));
   const total = items.reduce((a, i) => a + i.qty * i.unitPrice, 0);
   const now = new Date();
-  const sale = { id: crypto.randomUUID(), ts: now.getTime(), date: bzISO(now), items, total, paid: salePaid, customerId: custId, customerName: custName };
+  const sale = { id: crypto.randomUUID(), ts: now.getTime(), date: bzISO(now), items, total, paid: salePaid, customerId: custId, customerName: custName, by: bzIsStaff() ? (bzGet("mytab_staff_name") || "") : "" };
   b.sales.push(sale);
   bizSave(); bzMark("sale", sale.id);
   if (!salePaid && custId) bzAddDebt(custId, items.map((i) => i.qty + " " + i.name).join(", "), total);
@@ -2270,7 +2277,7 @@ function bzSaleSummary(s) { return s.items.map((i) => i.qty + " × " + i.name).j
 
 function renderSales() {
   const b = bizData(), today = bzISO();
-  const todays = b.sales.filter((s) => s.date === today).sort((a, c) => c.ts - a.ts);
+  const todays = b.sales.filter((s) => s.date === today && (!bzIsStaff() || s.by === bzGet("mytab_staff_name"))).sort((a, c) => c.ts - a.ts);
   const tot = todays.reduce((a, s) => a + s.total, 0);
   const prodChips = b.products.map((p) => `<button class="chip" data-b="addProd" data-id="${esc(p.id)}">${esc(p.name)} <span class="biz-dim">${fmt(p.price)}</span></button>`).join("");
   const cart = saleCart.map((l) => `
@@ -2293,17 +2300,17 @@ function renderSales() {
     <div class="biz-hist">
       <div style="min-width:0;flex:1;">
         <div class="biz-hist-main">${esc(bzSaleSummary(s))}</div>
-        <div class="biz-dim">${bzTime(s.ts)}${s.customerName ? " · " + esc(s.customerName) : ""}${s.paid ? "" : ` · <b style="color:var(--yellow)">on credit</b>`}</div>
+        <div class="biz-dim">${bzTime(s.ts)}${s.by && !bzIsStaff() ? " · by " + esc(s.by) : ""}${s.customerName ? " · " + esc(s.customerName) : ""}${s.paid ? "" : ` · <b style="color:var(--yellow)">on credit</b>`}</div>
       </div>
       <div class="biz-hist-amt">${fmt(s.total)}</div>
-      <button class="biz-x" data-b="saleDel" data-id="${esc(s.id)}" aria-label="Delete sale">${icon.trashSm}</button>
+      ${bzIsStaff() ? "" : `<button class="biz-x" data-b="saleDel" data-id="${esc(s.id)}" aria-label="Delete sale">${icon.trashSm}</button>`}
     </div>`).join("");
   return `<div class="screen">
     <div class="hero">
       ${bzHeroTop()}
-      <div class="hero-label">Sold today</div>
-      <div class="hero-amount">${fmt(tot)}</div>
-      <div class="hero-label" style="margin-top:2px;">${todays.length} sale${todays.length === 1 ? "" : "s"}</div>
+      <div class="hero-label">${bzIsStaff() ? "Sales you recorded today" : "Sold today"}</div>
+      <div class="hero-amount">${bzIsStaff() ? todays.length : fmt(tot)}</div>
+      ${bzIsStaff() ? "" : `<div class="hero-label" style="margin-top:2px;">${todays.length} sale${todays.length === 1 ? "" : "s"}</div>`}
     </div>
     <div class="biz-body">
       <div class="quickadd-label">Tap what you sold</div>
@@ -2529,7 +2536,12 @@ function renderSummary() {
 /* =========================== BACKUP / SETTINGS =========================== */
 function bzSettingsCard() {
   const waiting = bzQueueLen() + loadQueue().length;
-  return bzPayCard() + `<div class="quickadd-label">Your records</div>
+  return bzPayCard() + `<div class="quickadd-label">Your attendants</div>
+    <div class="balance-card" style="margin:8px 0 20px;text-align:left;">
+      <div class="biz-dim" style="font-size:13px;">Let someone who works for you record sales on their own phone, without seeing your money.</div>
+      <button class="settle-btn" data-b="smOpen" style="width:100%;margin-top:10px;">Manage attendants</button>
+    </div>
+    <div class="quickadd-label">Your records</div>
     <div class="balance-card" style="margin:8px 0 20px;text-align:left;">
       <div style="font-weight:700;font-size:14.5px;">${waiting ? "Sending your changes…" : "✓ Saved online"}</div>
       <div class="biz-dim" style="font-size:13px;margin-top:4px;">${waiting ? waiting + " change" + (waiting === 1 ? "" : "s") + " will go up as soon as you have network." : "Your sales, customers and what you owe are safe. Log in on any phone and they appear."}</div>
@@ -2555,7 +2567,7 @@ function bzSalesCsv() {
 /* =============================== EVENTS =============================== */
 function bzFind(key) { return saleCart.find((l) => l.key === key); }
 const BZ = {
-  nav: (el) => { view = el.dataset.v; oweFormOpen = false; window.scrollTo(0, 0); render(); },
+  nav: (el) => { if (bzIsStaff() && !["home", "sales"].includes(el.dataset.v)) return; view = el.dataset.v; oweFormOpen = false; window.scrollTo(0, 0); render(); },
   saleMic: () => bzListen("sale", bzSaleVoice),
   addProd: (el) => { const p = bizData().products.find((x) => x.id === el.dataset.id); if (p) { bzCartAdd({ productId: p.id, name: p.name, qty: 1, unitPrice: p.price, unit: p.unit }); render(); buzz(20); } },
   npToggle: () => { npOpen = !npOpen; render(); },
@@ -2787,7 +2799,7 @@ async function bzTick(force) {
     bzSyncMissing = false;
     if (r.data.rev !== bzLastRev) {
       let changed = await bzPull();
-      if (await bzLoadStats()) changed = true;
+      if (!bzIsStaff() && await bzLoadStats()) changed = true;
       if (loadQueue().length === 0) {
         const c0 = enqueueCount;
         const { debtors: p, error } = await fetchCustomers();
@@ -2817,7 +2829,7 @@ function bzAutoStart() {
 const bzGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const bzSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const bzBigOn = () => bzGet("mytab_big_text") !== "0";
-function bzPlanChip() { return `<button class="biz-plan${isPro() ? " biz-plan--pro" : ""}" data-b="goPlan">${isPro() ? "PRO ✓" : "FREE ›"}</button>`; }
+function bzPlanChip() { if (bzIsStaff()) return ""; return `<button class="biz-plan${isPro() ? " biz-plan--pro" : ""}" data-b="goPlan">${isPro() ? "PRO ✓" : "FREE ›"}</button>`; }
 function bzHeroTop() {
   return `<div class="brand-name">MyTab ${bzPlanChip()}</div>
     <button class="biz-gear" data-b="goSettings" aria-label="Settings">${icon.settings}</button>`;
@@ -2945,6 +2957,180 @@ Object.assign(BZ, {
   },
 });
 if ("serviceWorker" in navigator) { window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); }); }
+
+
+/* =====================================================================
+   STAFF (attendants): record sales and customer payments, nothing else
+   ===================================================================== */
+const BZ_ROLE_KEY = "mytab_role", BZ_SNAME_KEY = "mytab_staff_name";
+const bzIsStaff = () => bzGet(BZ_ROLE_KEY) === "staff";
+let slId = "", slCode = "", slError = "", slBusy = false;
+let smList = null, smShowPhones = false, smName = "", smCode = "", smError = "", smBusy = false, smLast = null, smEditId = null, smEditCode = "";
+
+/* ---- attendant sign-in screen ---- */
+function renderStaffLogin() {
+  return `<div class="screen">
+    <div class="center-screen" style="justify-content:flex-start; padding-top:60px;">
+      <div class="splash-brand" style="font-size:24px;">MyTab</div>
+      <div class="splash-tag">Attendant sign in</div>
+      <div class="stage-form">
+        <label>Shop phone number
+          <input data-b="slId" data-ev="input" type="tel" inputmode="numeric" placeholder="The owner's number, 080…" value="${esc(slId)}" />
+        </label>
+        <label>Your 4-digit code
+          <input data-b="slCode" data-ev="input" type="tel" inputmode="numeric" maxlength="4" placeholder="••••" value="${esc(slCode)}" />
+        </label>
+        <div class="stage-hint">Ask the shop owner for the shop's phone number and your code.</div>
+        ${slError ? `<div class="stage-error">${esc(slError)}</div>` : ""}
+      </div>
+    </div>
+    <button class="primary-btn" data-b="slGo" ${slBusy ? "disabled" : ""}>${slBusy ? "Checking…" : "Sign in"}</button>
+    <button class="ghost-btn" data-b="slBack" style="margin:10px 18px 18px;justify-content:center;">Back</button>
+  </div>`;
+}
+
+/* ---- what an attendant sees in Settings ---- */
+function renderStaffMe() {
+  const meta = getBusinessMeta();
+  return `<div class="screen">
+    <div class="topbar">
+      <button class="iconbtn" data-b="staffBack">${icon.back}</button>
+      <div class="topbar-title">My account</div>
+      <div style="width:36px"></div>
+    </div>
+    <div class="biz-body">
+      <div class="balance-card" style="margin:0 0 20px;text-align:left;">
+        <div class="biz-dim">Signed in as</div>
+        <div style="font-weight:800;font-size:18px;">${esc(bzGet(BZ_SNAME_KEY) || "Attendant")}</div>
+        <div class="biz-dim" style="margin-top:6px;">Shop: <b style="color:var(--ink)">${esc(meta.name || "")}</b></div>
+        <div class="biz-dim" style="margin-top:8px;">You can record sales and take payments from customers.</div>
+      </div>
+      <div class="quickadd-label">Text size</div>
+      <div class="biz-pay" style="margin-top:8px;"><button class="chip${bzBigOn() ? "" : " chip--active"}" data-b="bigOff">Normal</button><button class="chip${bzBigOn() ? " chip--active" : ""}" data-b="bigOn">Bigger</button></div>
+      <button class="ghost-btn" data-b="staffOut" style="margin-top:24px;width:100%;justify-content:center;">Sign out</button>
+    </div>
+  </div>`;
+}
+
+/* ---- owner: manage attendants ---- */
+async function bzLoadStaff() {
+  const r = await apiFetch("/api/staff", { method: "GET" });
+  if (r.ok) { smList = r.data.staff || []; smShowPhones = !!r.data.showPhones; } else if (smList === null) smList = [];
+  if (view === "staffmgr") bzRenderSoon();
+}
+function renderStaffMgr() {
+  const list = (smList || []).map((s) => `
+    <div class="biz-line">
+      <div class="biz-line-top">
+        <div class="biz-line-name">${esc(s.name)}</div>
+        <div style="display:flex;gap:6px;">
+          <button class="chip" data-b="smEdit" data-id="${esc(s.id)}">${smEditId === s.id ? "Cancel" : "New code"}</button>
+          <button class="chip" data-b="smDel" data-id="${esc(s.id)}" style="color:var(--red);">Remove</button>
+        </div>
+      </div>
+      ${smEditId === s.id ? `<div class="biz-inline"><input data-b="smEditCode" data-ev="input" type="tel" inputmode="numeric" maxlength="4" placeholder="New 4-digit code" value="${esc(smEditCode)}" /><button class="settle-btn" data-b="smEditSave">Save</button></div>` : ""}
+    </div>`).join("");
+  const last = smLast ? `<div class="biz-card" style="background:#E1EEE3;border-color:#C9DECF;">
+      <div style="font-weight:800;">${esc(smLast.name)} can now sign in ✓</div>
+      <div class="biz-dim" style="margin:4px 0 10px;">Send them how to get in. Their code is <b style="color:var(--ink)">${esc(smLast.code)}</b>.</div>
+      <button class="settle-btn" data-b="smSend" style="width:100%;">Send on WhatsApp</button>
+    </div>` : "";
+  const canAdd = bizPro();
+  return `<div class="screen">
+    <div class="topbar">
+      <button class="iconbtn" data-b="smBack">${icon.back}</button>
+      <div class="topbar-title">Your attendants</div>
+      <div style="width:36px"></div>
+    </div>
+    <div class="biz-body">
+      <div class="biz-dim" style="font-size:13.5px;">An attendant signs in on their own phone and can record sales and take payments from customers. They <b style="color:var(--ink)">cannot</b> delete anything, see your totals, or see what you owe.</div>
+      ${last}
+      ${list ? `<div class="quickadd-label" style="margin-top:16px;">Signed up</div>${list}` : (smList ? `<div class="biz-eg" style="text-align:left;margin-top:14px;">No attendants yet.</div>` : "")}
+      ${canAdd ? `<div class="biz-card">
+        <div class="biz-h">Add an attendant</div>
+        <div class="stage-form" style="margin:0;gap:10px;">
+          <label>Name<input data-b="smName" data-ev="input" placeholder="e.g. Tola" value="${esc(smName)}" /></label>
+          <label>Their 4-digit code <span class="optional">(you choose it, they use it to sign in)</span><input data-b="smCode" data-ev="input" type="tel" inputmode="numeric" maxlength="4" placeholder="e.g. 7391" value="${esc(smCode)}" /></label>
+          ${smError ? `<div class="stage-error">${esc(smError)}</div>` : ""}
+          <button class="settle-btn" data-b="smAdd" ${smBusy ? "disabled" : ""}>${smBusy ? "Adding…" : "Add attendant"}</button>
+        </div></div>`
+      : `<div class="biz-card"><div class="biz-h">Attendants come with MyTab Pro</div><div class="biz-dim" style="margin-bottom:10px;">Let your workers record sales without seeing your money.</div><button class="settle-btn" data-b="goPro" style="width:100%;">See Pro</button></div>`}
+      <div class="quickadd-label" style="margin-top:18px;">Customer phone numbers</div>
+      <div class="biz-dim" style="margin-top:4px;">Should attendants see your customers' phone numbers?</div>
+      <div class="biz-pay" style="margin-top:8px;"><button class="chip${smShowPhones ? "" : " chip--active"}" data-b="smPhones" data-v="0">Hidden</button><button class="chip${smShowPhones ? " chip--active" : ""}" data-b="smPhones" data-v="1">Can see</button></div>
+    </div>
+  </div>`;
+}
+Object.assign(BZ, {
+  slOpen: () => { slError = ""; slId = ""; slCode = ""; stage = "staffLogin"; render(); },
+  slBack: () => { stage = "login"; render(); },
+  slId: (el) => { slId = el.value; }, slCode: (el) => { slCode = el.value.replace(/\D/g, "").slice(0, 4); },
+  slGo: async () => {
+    slError = "";
+    const idn = classifyIdentifier(slId);
+    if (!idn) { slError = "Enter the shop's phone number."; render(); return; }
+    if (!/^\d{4}$/.test(slCode)) { slError = "Your code is 4 numbers."; render(); return; }
+    if (!navigator.onLine) { slError = "You need internet to sign in the first time."; render(); return; }
+    slBusy = true; render();
+    const r = await apiFetch("/auth/staff-login", { method: "POST", body: JSON.stringify({ identifier: idn.value, code: slCode }) });
+    slBusy = false;
+    if (!r.ok) { slError = r.error || "Couldn't sign in, try again."; render(); return; }
+    const { token, business, staff, showPhones } = r.data;
+    setToken(token); BUSINESS_ID = business.id; setBusinessId(BUSINESS_ID);
+    setBusinessMeta({ name: business.name, identifier: idn.value, type: business.business_type || "", pin: "" });
+    bzSet(BZ_ROLE_KEY, "staff"); bzSet(BZ_SNAME_KEY, staff.name);
+    markOnboarded(); _biz = null; _bizKey = null; bzLastRev = null;
+    const { debtors: pulled } = await fetchCustomers();
+    debtors = pulled || []; saveDebtors();
+    stage = "app"; view = "sales"; slCode = "";
+    render();
+  },
+  staffBack: () => { view = "sales"; render(); },
+  staffOut: () => { if (confirm("Sign out of MyTab on this phone?")) handleLogout(); },
+  /* owner side */
+  smOpen: () => { smError = ""; smLast = null; smEditId = null; view = "staffmgr"; render(); bzLoadStaff(); },
+  smBack: () => { goSettings(); },
+  smName: (el) => { smName = el.value; }, smCode: (el) => { smCode = el.value.replace(/\D/g, "").slice(0, 4); },
+  smAdd: async () => {
+    smError = "";
+    if (!smName.trim()) { smError = "Enter the attendant's name."; render(); return; }
+    if (!/^\d{4}$/.test(smCode)) { smError = "The code must be 4 numbers."; render(); return; }
+    smBusy = true; render();
+    const r = await apiFetch("/api/staff", { method: "POST", body: JSON.stringify({ name: smName.trim(), code: smCode }) });
+    smBusy = false;
+    if (!r.ok) { smError = r.status === 402 ? "Attendants need MyTab Pro." : (r.error || "Couldn't add. Try again."); render(); return; }
+    smLast = { name: smName.trim(), code: smCode }; smName = ""; smCode = "";
+    await bzLoadStaff(); render();
+  },
+  smSend: () => {
+    if (!smLast) return;
+    const meta = getBusinessMeta();
+    const url = new URL("./", location.href).href;
+    const msg = "Hi " + smLast.name + ", you can now record sales for " + (meta.name || "the shop") + " on MyTab.\n1. Open " + url + "\n2. Tap Get started, then 'I work in a shop (attendant)'\n3. Shop phone number: " + (meta.identifier || "") + "\n4. Your code: " + smLast.code;
+    window.location.href = "https://wa.me/?text=" + encodeURIComponent(msg);
+  },
+  smEdit: (el) => { smEditId = smEditId === el.dataset.id ? null : el.dataset.id; smEditCode = ""; render(); },
+  smEditCode: (el) => { smEditCode = el.value.replace(/\D/g, "").slice(0, 4); },
+  smEditSave: async () => {
+    if (!/^\d{4}$/.test(smEditCode)) { flash("The code must be 4 numbers."); return; }
+    const r = await apiFetch("/api/staff/" + smEditId, { method: "PATCH", body: JSON.stringify({ code: smEditCode }) });
+    if (!r.ok) { flash(r.error || "Couldn't change the code."); return; }
+    smEditId = null; smEditCode = ""; flash("New code saved"); render();
+  },
+  smDel: async (el) => {
+    const s = (smList || []).find((x) => x.id === el.dataset.id); if (!s) return;
+    if (!confirm("Remove " + s.name + "? They will be signed out and can't record sales any more.")) return;
+    const r = await apiFetch("/api/staff/" + s.id, { method: "DELETE" });
+    if (!r.ok) { flash(r.error || "Couldn't remove. Try again."); return; }
+    smLast = null; await bzLoadStaff(); flash(s.name + " removed"); render();
+  },
+  smPhones: async (el) => {
+    const show = el.dataset.v === "1";
+    const r = await apiFetch("/api/staff/settings", { method: "POST", body: JSON.stringify({ showPhones: show }) });
+    if (!r.ok) { flash("Couldn't save. Check your network."); return; }
+    smShowPhones = show; render();
+  },
+});
 
     render();
     refreshFromServerIfIdle();
