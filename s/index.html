@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex" />
+<title>Your balance · MyTab</title>
+<meta name="theme-color" content="#2F6B4F" />
+<style>
+  :root { --bg:#F6F1E4; --surface:#FFFDF8; --ink:#23301F; --soft:#6A7361; --line:#E4DCC6; --primary:#2F6B4F; --red:#B3402D; --green:#3F7D4D; --amber:#C6861D; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161C14; --surface:#1F271C; --ink:#EEF1E8; --soft:#A3AE98; --line:#323C2E; --primary:#5FA781; --red:#E0735F; --green:#7FC48F; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size:18px; line-height:1.45; display:flex; justify-content:center; padding:20px 16px 40px; }
+  main { width:100%; max-width:440px; }
+  .shop { font-size:15px; color:var(--soft); font-weight:600; margin:4px 0 2px; }
+  h1 { font-size:24px; margin:0 0 14px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:18px; margin-bottom:14px; }
+  .label { font-size:14px; color:var(--soft); font-weight:600; }
+  .bal { font-size:40px; font-weight:800; letter-spacing:-.5px; margin-top:2px; }
+  .bal.owe { color:var(--red); } .bal.clear { color:var(--green); }
+  .row { display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
+  .row:first-of-type { border-top:none; }
+  .item { font-weight:700; } .meta { font-size:14px; color:var(--soft); }
+  .amt { text-align:right; white-space:nowrap; font-weight:700; }
+  .done { color:var(--green); font-size:14px; font-weight:700; }
+  .pay { white-space:pre-wrap; font-weight:700; font-size:19px; margin-top:6px; }
+  a.call { display:block; text-align:center; background:var(--primary); color:#fff; text-decoration:none; padding:15px; border-radius:14px; font-weight:800; margin-top:12px; }
+  footer { text-align:center; font-size:13px; color:var(--soft); margin-top:22px; }
+  footer a { color:inherit; }
+  .msg { text-align:center; padding:40px 10px; color:var(--soft); }
+</style>
+</head>
+<body>
+<main id="root"><div class="msg">Loading your balance…</div></main>
+<script>
+  var API = "https://mytab-backend-ch5s.onrender.com";
+  var root = document.getElementById("root");
+  var token = new URLSearchParams(location.search).get("t") || "";
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function fmt(n) { return "₦" + Number(n).toLocaleString("en-NG", { maximumFractionDigits: 0 }); }
+  function fmtDate(iso) { try { var p = String(iso).slice(0, 10).split("-"); return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" }); } catch (e) { return iso; } }
+  function show(html) { root.innerHTML = html; }
+  function render(d) {
+    var b = d.business, owing = d.balance > 0;
+    var rows = d.entries.map(function (e) {
+      var left = e.amount - e.paid;
+      return '<div class="row"><div><div class="item">' + esc(e.item) + '</div><div class="meta">' + esc(fmtDate(e.date)) + (e.paid > 0 && left > 0 ? " · paid " + fmt(e.paid) : "") + '</div></div>' +
+        '<div class="amt">' + (left > 0 ? fmt(left) : '<span class="done">Paid ✓</span>') + (left > 0 && e.paid > 0 ? '<div class="meta">of ' + fmt(e.amount) + '</div>' : "") + '</div></div>';
+    }).join("");
+    show('<div class="shop">' + esc(b.name) + '</div><h1>Hello ' + esc(d.customer) + '</h1>' +
+      '<div class="card"><div class="label">' + (owing ? "You currently owe" : "You owe nothing") + '</div><div class="bal ' + (owing ? "owe" : "clear") + '">' + fmt(d.balance) + '</div></div>' +
+      (owing && b.payInfo ? '<div class="card"><div class="label">How to pay</div><div class="pay">' + esc(b.payInfo) + '</div></div>' : "") +
+      (rows ? '<div class="card"><div class="label" style="margin-bottom:4px">Your records</div>' + rows + '</div>' : "") +
+      (b.phone ? '<a class="call" href="tel:' + esc(b.phone) + '">Call ' + esc(b.name) + '</a>' : "") +
+      '<footer>Kept with <a href="https://mytab.com.ng">MyTab</a></footer>');
+  }
+  function load(attempt) {
+    if (!/^[0-9a-f]{32}$/.test(token)) { show('<div class="msg">This link isn\'t valid. Please ask the shop to send it again.</div>'); return; }
+    fetch(API + "/public/statement/" + token, { cache: "no-store" }).then(function (r) {
+      if (r.status === 404) { show('<div class="msg">This link isn\'t valid any more. Please ask the shop to send it again.</div>'); return null; }
+      if (!r.ok) throw new Error("bad");
+      return r.json();
+    }).then(function (d) { if (d) render(d); }).catch(function () {
+      if (attempt < 4) { show('<div class="msg">Loading your balance… one moment.</div>'); setTimeout(function () { load(attempt + 1); }, 4000); }
+      else show('<div class="msg">Couldn\'t load right now. Please check your network and refresh.</div>');
+    });
+  }
+  load(0);
+</script>
+</body>
+</html>
