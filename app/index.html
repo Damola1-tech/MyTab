@@ -221,6 +221,76 @@
   .biz-guide-row b { font-size:17px; }
   .biz-guide-ico { font-size:28px; width:40px; text-align:center; }
   .biz-owehint--good { color:#BFE8CB; }
+
+  /* ===== UI refresh: the shop ledger ===== */
+  :root { --rule:#E0D6BC; }
+  #phone { border-radius:26px; }
+  :focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+
+  /* header sits on ruled notebook paper; the money figure gets an accountant's double rule */
+  .hero { background-color:#245840; background-image:repeating-linear-gradient(to bottom, transparent 0 35px, rgba(243,239,225,.075) 35px 36px); padding:26px 22px 24px; }
+  .hero-label { font-size:13.5px; font-weight:600; color:rgba(243,239,225,.82); margin-top:14px; }
+  .hero-amount { display:inline-block; font-family:'Inter',sans-serif; font-weight:800; font-size:42px; line-height:1.15; letter-spacing:-.02em; font-variant-numeric:tabular-nums; padding-bottom:6px; border-bottom:4px double rgba(243,239,225,.6); margin-top:2px; }
+  .hero-amount ~ .hero-label { margin-top:10px; }
+
+  /* figures line up like a ledger column */
+  .grow-amount, .balance-amount, .entry-amount, .amount-display, .biz-line-total, .biz-hist-amt, .biz-row-amt, .biz-stat b { font-family:'Inter',sans-serif; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+  .balance-amount { font-size:38px; }
+
+  /* customer list: ruled ledger lines instead of colour boxes */
+  .list { gap:0; padding:4px 20px 110px; }
+  .glance-note { font-size:13px; margin:10px 0 4px; }
+  .list .grow { background:transparent; border-radius:0; border-bottom:1px solid var(--rule); padding:15px 0; color:var(--ink); min-height:68px; }
+  .list .grow:active { background:var(--bg); }
+  .grow-dot { width:11px; height:11px; }
+  .grow-name { display:flex; flex-direction:column; font-size:17.5px; font-weight:700; }
+  .grow-age { font-size:13px; font-weight:600; color:var(--ink-soft); margin-top:2px; }
+  .list .grow--red .grow-age { color:var(--red); }
+  .list .grow--yellow .grow-age { color:var(--yellow); }
+  .list .grow .grow-amount { font-size:18px; }
+  .list .grow--red .grow-amount { color:var(--red); }
+  .list .grow--yellow .grow-amount { color:var(--yellow); }
+  .list .grow--green .grow-amount { color:var(--green); font-size:13.5px; font-weight:700; }
+
+  .tabs { border-radius:12px; padding:4px; margin:16px 20px 0; }
+  .tab { padding:11px; font-size:14px; border-radius:9px; }
+  .tab--active { box-shadow:0 1px 2px rgba(35,48,31,.14), 0 3px 8px -4px rgba(35,48,31,.25); }
+
+  /* sentence-case section labels (easier to read than capitals) */
+  .quickadd-label { text-transform:none; letter-spacing:0; font-size:13.5px; font-weight:700; color:var(--ink-soft); }
+
+  /* bigger touch targets for thumbs and for older eyes */
+  .chip, .settle-btn, .ghost-btn, .settle-full { min-height:46px; border-radius:12px; }
+  .chip { font-size:14.5px; }
+  .settle-btn, .ghost-btn, .settle-full { font-size:15px; }
+  .primary-btn { border-radius:14px; padding:17px; font-size:16.5px; box-shadow:0 8px 16px -8px rgba(31,75,55,.6); transition:transform .08s ease; }
+  .primary-btn:active, .settle-btn:active, .chip:active, .fab:active { transform:scale(.97); }
+  .form input, .stage-form input, .stage-form select, .biz-full, .biz-inline input { min-height:48px; font-size:16px; border-radius:12px; }
+
+  /* the add button says what it does */
+  .fab { width:auto; height:58px; padding:0 22px 0 18px; border-radius:30px; gap:8px; box-shadow:0 10px 20px -8px rgba(110,70,10,.55); }
+  .fab::after { content:"Add customer"; font-weight:800; font-size:15.5px; }
+
+  /* bottom navigation: clear active marker */
+  .biz-nav { box-shadow:0 -6px 18px -12px rgba(35,48,31,.35); }
+  .biz-nav-btn { position:relative; font-size:12px; padding:11px 2px 9px; }
+  .biz-nav-btn svg { width:23px; height:23px; }
+  .biz-nav-btn--on::before { content:""; position:absolute; top:0; left:50%; width:30px; height:3.5px; margin-left:-15px; background:var(--primary); border-radius:0 0 4px 4px; }
+
+  .biz-stat { border-radius:14px; padding:14px; }
+  .biz-stat b { font-size:20px; }
+  .entry-row { padding:16px 2px; }
+  .topbar { padding:16px 14px; }
+  .topbar-title { font-size:17px; }
+  .splash-brand { font-size:40px; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+  #phone.has-nav .toast { bottom:152px; }
+  #phone.has-nav.big .toast { bottom:166px; }
+  .sync-btn { top:1px; right:4px; padding:3px 6px; gap:4px; }
+  .sync-ico { font-size:13px; }
+  .sync-dot { width:7px; height:7px; }
+  .hero { background-image:repeating-linear-gradient(to bottom, transparent 0 35px, rgba(243,239,225,.05) 35px 36px); }
 </style>
 </head>
 <body>
@@ -1008,7 +1078,7 @@ document.addEventListener("visibilitychange", () => {
           </div>
           ${tab === "all" ? `<div class="searchbar">${icon.search}<input id="searchInput" placeholder="Search a name…" value="${esc(query)}" /></div>` : ""}
           <div class="list">${listHtml}</div>
-          <button class="fab" id="addDebtorBtn">${icon.plus}</button>
+          <button class="fab" id="addDebtorBtn" aria-label="Add customer">${icon.plus}</button>
         </div>`;
     }
 
@@ -1018,7 +1088,7 @@ document.addEventListener("visibilitychange", () => {
       const cls = bal === 0 ? "green" : status(d);
       return `<button class="grow grow--${cls}" data-open="${d.id}">
         <span class="grow-dot"></span>
-        <span class="grow-name">${esc(d.name)}</span>
+        <span class="grow-name">${esc(d.name)}${bal > 0 ? `<small class="grow-age">${bzAge(d)}</small>` : ""}</span>
         <span class="grow-amount">${bal === 0 ? "Settled" : fmt(bal)}</span>
       </button>`;
     }
@@ -2197,6 +2267,12 @@ function bzListen(key, onText) {
 }
 const bzHasVoice = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 const bzMicBtn = (key, label, act) => !bzHasVoice() ? "" : `<button class="biz-mic${bizMic === key ? " biz-mic--on" : ""}" data-b="${act}">${icon.mic}<span>${bizMic === key ? "Listening… speak now" : label}</span></button>`;
+
+/* ---- how long someone has owed ---- */
+function bzAge(d) {
+  const n = oldestUnpaidDays(d);
+  return n <= 0 ? "Owing since today" : n === 1 ? "Owing 1 day" : "Owing " + n + " days";
+}
 
 /* ---- bottom navigation ---- */
 const BZ_NAV_VIEWS = ["home", "sales", "owe", "summary", "staffme"];
