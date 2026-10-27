@@ -291,6 +291,14 @@
   .sync-ico { font-size:13px; }
   .sync-dot { width:7px; height:7px; }
   .hero { background-image:repeating-linear-gradient(to bottom, transparent 0 35px, rgba(243,239,225,.05) 35px 36px); }
+
+  /* on a phone the app is the whole screen, not a card floating on a page */
+  @media (max-width: 520px) {
+    body { padding:0; background:var(--surface); }
+    #phone { max-width:none; border-radius:0; box-shadow:none; min-height:100vh; min-height:100dvh; }
+    .screen { min-height:100vh; min-height:100dvh; }
+    .biz-nav { max-width:none; }
+  }
 </style>
 </head>
 <body>
