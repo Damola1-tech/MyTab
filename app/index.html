@@ -23,14 +23,14 @@
   }
   * { box-sizing:border-box; }
   html, body { margin:0; padding:0; }
-  body { min-height:100vh; background:linear-gradient(180deg,#EFE8D6 0%,var(--bg) 220px); display:flex; justify-content:center; padding:24px 12px; font-family:'Inter',sans-serif; color:var(--ink); }
+  body { min-height:100vh; background:linear-gradient(180deg,#EFE8D6 0%,var(--bg) 220px); display:flex; justify-content:center; padding:24px 12px; font-family:'Manrope',system-ui,sans-serif; color:var(--ink); }
   #phone { width:100%; max-width:420px; min-height:740px; background:var(--surface); border-radius:22px; box-shadow:0 1px 0 rgba(35,48,31,0.06),0 20px 40px -24px rgba(35,48,31,0.35); overflow:hidden; position:relative; display:flex; flex-direction:column; border:1px solid var(--line); }
   .screen { display:flex; flex-direction:column; flex:1; min-height:740px; }
 
   .hero { background:var(--primary); color:#F3EFE1; padding:24px 20px 18px; }
-  .brand-name { font-family:'Source Serif 4',serif; font-weight:700; font-size:17px; opacity:0.9; }
+  .brand-name { font-family:'Manrope',system-ui,sans-serif; font-weight:700; font-size:17px; opacity:0.9; }
   .hero-label { font-size:12.5px; color:rgba(243,239,225,0.75); margin-top:10px; }
-  .hero-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:36px; }
+  .hero-amount { font-family:'Manrope',system-ui,sans-serif; font-weight:700; font-size:36px; }
 
   .tabs { display:flex; gap:6px; margin:14px 18px 0; background:var(--bg); border-radius:10px; padding:4px; }
   .tab { flex:1; border:none; background:transparent; padding:9px; border-radius:8px; font-weight:700; font-size:13px; color:var(--ink-soft); cursor:pointer; font-family:inherit; }
@@ -44,7 +44,7 @@
 
   .grow { display:flex; align-items:center; gap:12px; border:none; border-radius:14px; padding:18px 16px; cursor:pointer; font-family:inherit; text-align:left; width:100%; }
   .grow-name { flex:1; font-size:17px; font-weight:700; }
-  .grow-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:17px; }
+  .grow-amount { font-family:'Manrope',system-ui,sans-serif; font-weight:700; font-size:17px; }
   .grow-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
   .grow--red { background:var(--red-bg); color:var(--red); }
   .grow--red .grow-dot { background:var(--red); }
@@ -67,7 +67,7 @@
 
   .balance-card { margin:16px 18px; background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:18px; text-align:center; }
   .balance-label { font-size:12.5px; color:var(--ink-soft); margin-bottom:4px; }
-  .balance-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:30px; color:var(--red); }
+  .balance-amount { font-family:'Manrope',system-ui,sans-serif; font-weight:700; font-size:30px; color:var(--red); }
   .balance-amount--clear { color:var(--green); }
   .wa-btn { margin-top:12px; display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--primary-dark); background:var(--green-bg); border-radius:8px; padding:9px 13px; text-decoration:none; }
 
@@ -77,7 +77,7 @@
   .entry-item { font-size:15.5px; font-weight:700; }
   .entry-date { font-size:12px; color:var(--ink-soft); margin-top:2px; }
   .entry-right { text-align:right; }
-  .entry-amount { font-family:'Source Serif 4',serif; font-weight:700; font-size:16px; }
+  .entry-amount { font-family:'Manrope',system-ui,sans-serif; font-weight:700; font-size:16px; }
   .entry-amount--paid { color:var(--ink-soft); text-decoration:line-through; }
   .tag { margin-top:4px; font-size:11px; display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:20px; font-weight:700; }
   .tag--paid { background:var(--green-bg); color:var(--green); }
@@ -109,7 +109,7 @@
   .ghost-btn { background:transparent; border:1px solid var(--line); color:var(--ink-soft); display:flex; align-items:center; gap:4px; }
 
   .quickadd-label { font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.03em; }
-  .amount-display { font-family:'Source Serif 4',serif; font-weight:700; font-size:30px; color:var(--primary); }
+  .amount-display { font-family:'Manrope',system-ui,sans-serif; font-weight:700; font-size:30px; color:var(--primary); }
   .plain-input { border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14px; font-family:inherit; width:100%; }
 
   .form { padding:16px 18px; display:flex; flex-direction:column; gap:16px; flex:1; }
@@ -132,7 +132,7 @@
   svg { display:block; }
 
   .center-screen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 24px; }
-  .splash-brand { font-family:'Source Serif 4',serif; font-weight:700; font-size:34px; color:var(--primary); }
+  .splash-brand { font-family:'Manrope',system-ui,sans-serif; font-weight:700; font-size:34px; color:var(--primary); }
   .splash-tag { font-size:14px; color:var(--ink-soft); margin-top:6px; }
   .splash-lede { font-size:13.5px; color:var(--ink-soft); margin-top:18px; line-height:1.5; max-width:280px; }
   .stage-form { width:100%; margin-top:26px; text-align:left; display:flex; flex-direction:column; gap:14px; }
@@ -216,7 +216,7 @@
   #phone.has-nav.big .fab { bottom:94px; }
   .biz-guide { position:fixed; inset:0; background:rgba(35,48,31,.55); z-index:20; display:flex; align-items:center; justify-content:center; padding:20px; }
   .biz-guide-card { background:var(--surface); border-radius:20px; padding:22px 20px; width:100%; max-width:380px; max-height:90vh; overflow:auto; }
-  .biz-guide-title { font-family:'Source Serif 4',serif; font-size:24px; font-weight:700; margin-bottom:10px; }
+  .biz-guide-title { font-family:'Manrope',system-ui,sans-serif; font-size:24px; font-weight:700; margin-bottom:10px; }
   .biz-guide-row { display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:16px; }
   .biz-guide-row b { font-size:17px; }
   .biz-guide-ico { font-size:28px; width:40px; text-align:center; }
@@ -230,11 +230,11 @@
   /* header sits on ruled notebook paper; the money figure gets an accountant's double rule */
   .hero { background-color:#245840; background-image:repeating-linear-gradient(to bottom, transparent 0 35px, rgba(243,239,225,.075) 35px 36px); padding:26px 22px 24px; }
   .hero-label { font-size:13.5px; font-weight:600; color:rgba(243,239,225,.82); margin-top:14px; }
-  .hero-amount { display:inline-block; font-family:'Inter',sans-serif; font-weight:800; font-size:42px; line-height:1.15; letter-spacing:-.02em; font-variant-numeric:tabular-nums; padding-bottom:6px; border-bottom:4px double rgba(243,239,225,.6); margin-top:2px; }
+  .hero-amount { display:inline-block; font-family:'Manrope',system-ui,sans-serif; font-weight:800; font-size:42px; line-height:1.15; letter-spacing:-.02em; font-variant-numeric:tabular-nums; padding-bottom:6px; border-bottom:4px double rgba(243,239,225,.6); margin-top:2px; }
   .hero-amount ~ .hero-label { margin-top:10px; }
 
   /* figures line up like a ledger column */
-  .grow-amount, .balance-amount, .entry-amount, .amount-display, .biz-line-total, .biz-hist-amt, .biz-row-amt, .biz-stat b { font-family:'Inter',sans-serif; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+  .grow-amount, .balance-amount, .entry-amount, .amount-display, .biz-line-total, .biz-hist-amt, .biz-row-amt, .biz-stat b { font-family:'Manrope',system-ui,sans-serif; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
   .balance-amount { font-size:38px; }
 
   /* customer list: ruled ledger lines instead of colour boxes */
@@ -466,6 +466,8 @@ input:focus, select:focus, textarea:focus { border-color:var(--indigo); outline:
 .cl-addrow input { flex:1 1 100%; }
 .cl-addrow .settle-btn { flex:1 1 auto; }
 .biz-locked { background:var(--bg); border:0; border-radius:20px; }
+
+.biz-guide-ico { width:38px; flex:none; text-align:center; }
 </style>
 </head>
 <body>
@@ -1499,6 +1501,8 @@ document.addEventListener("visibilitychange", () => {
           <div class="stage-form" style="margin-top:18px; gap:10px;">
             <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Unlimited customers, no cap</span></div>
             <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Birthday & seasonal greetings</span></div>
+            <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Attendants: workers record sales without seeing your money</span></div>
+            <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Monthly Shop Record you can send on WhatsApp</span></div>
             <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Sales charts: what sells more, today vs yesterday, top customers</span></div>
             <div style="display:flex; gap:8px; align-items:flex-start;"><span>✅</span><span style="font-size:14px;">Everything new we add to Pro later</span></div>
           </div>
@@ -1593,17 +1597,17 @@ document.addEventListener("visibilitychange", () => {
           ${d ? `
             <div class="balance-card" style="margin:16px 0 12px; text-align:left;">
               <div class="balance-label">Collected (${esc(reportsRange === "all" ? "all time" : reportsRange === "week" ? "this week" : "this month")})</div>
-              <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:26px; color:var(--green);">${fmt(d.totalCollected)}</div>
+              <div style="font-family:'Manrope',system-ui,sans-serif; font-weight:700; font-size:26px; color:var(--green);">${fmt(d.totalCollected)}</div>
               <div class="stage-hint" style="margin-top:2px;">${d.paymentsCount} payment${d.paymentsCount === 1 ? "" : "s"} recorded</div>
             </div>
             <div class="balance-card" style="margin-bottom:12px; text-align:left;">
               <div class="balance-label">Still outstanding</div>
-              <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:26px; color:var(--red);">${fmt(d.totalOutstanding)}</div>
+              <div style="font-family:'Manrope',system-ui,sans-serif; font-weight:700; font-size:26px; color:var(--red);">${fmt(d.totalOutstanding)}</div>
               <div class="stage-hint" style="margin-top:2px;">Across all unpaid customers, all time</div>
             </div>
             <div class="balance-card" style="margin-bottom:12px; text-align:left;">
               <div class="balance-label">New debt recorded (${esc(reportsRange === "all" ? "all time" : reportsRange === "week" ? "this week" : "this month")})</div>
-              <div style="font-family:'Source Serif 4',serif; font-weight:700; font-size:20px;">${fmt(d.newDebtsAmount)}</div>
+              <div style="font-family:'Manrope',system-ui,sans-serif; font-weight:700; font-size:20px;">${fmt(d.newDebtsAmount)}</div>
               <div class="stage-hint" style="margin-top:2px;">${d.newDebtsCount} new entr${d.newDebtsCount === 1 ? "y" : "ies"}</div>
             </div>
             ${d.topOwing.length > 0 ? `
@@ -3296,6 +3300,7 @@ function bzGuide() {
     <div class="biz-guide-title">Welcome to MyTab 👋</div>
     ${row("🛒", "Sales", "Tap what you sold. Then press Record.")}
     ${row("👥", "Owe me", "People who owe you money.")}
+    ${row("🔒", "Close", "At night, count your drawer and see if it adds up.")}
     ${row("⬇️", "I owe", "Money you owe other people.")}
     ${row("📊", "Summary", "See what sells most and how today compares.")}
     <button class="primary-btn" data-b="guideDone" style="margin:14px 0 0;width:100%;">OK, let me start</button>

@@ -5,29 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="robots" content="noindex" />
 <title>Your balance · MyTab</title>
-<meta name="theme-color" content="#2F6B4F" />
+<meta name="theme-color" content="#1B2466" />
+<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" />
 <style>
-  :root { --bg:#F6F1E4; --surface:#FFFDF8; --ink:#23301F; --soft:#6A7361; --line:#E4DCC6; --primary:#2F6B4F; --red:#B3402D; --green:#3F7D4D; --amber:#C6861D; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#161C14; --surface:#1F271C; --ink:#EEF1E8; --soft:#A3AE98; --line:#323C2E; --primary:#5FA781; --red:#E0735F; --green:#7FC48F; } }
+  :root { --bg:#FFFFFF; --panel:#F3F4F9; --ink:#141A33; --soft:#5B6382; --line:#E3E6F0; --indigo:#1B2466; --red:#C23A2B; --green:#0F7F55; --green-bg:#DCF3E9;
+    --pattern:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56' fill='none' stroke='white' stroke-opacity='.10' stroke-width='1.2'%3E%3Ccircle cx='28' cy='28' r='9'/%3E%3Ccircle cx='28' cy='28' r='3.2' fill='white' fill-opacity='.10' stroke='none'/%3E%3Ccircle cx='0' cy='0' r='5'/%3E%3Ccircle cx='56' cy='0' r='5'/%3E%3Ccircle cx='0' cy='56' r='5'/%3E%3Ccircle cx='56' cy='56' r='5'/%3E%3Cpath d='M28 7v7M28 42v7M7 28h7M42 28h7'/%3E%3C/svg%3E"); }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0E1226; --panel:#181D3A; --ink:#EEF0FA; --soft:#A4ABCB; --line:#2A3058; --indigo:#1B2466; --red:#FF8B7A; --green:#58D6A2; --green-bg:#12382B; } }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size:18px; line-height:1.45; display:flex; justify-content:center; padding:20px 16px 40px; }
-  main { width:100%; max-width:440px; }
-  .shop { font-size:15px; color:var(--soft); font-weight:600; margin:4px 0 2px; }
-  h1 { font-size:24px; margin:0 0 14px; }
-  .card { background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:18px; margin-bottom:14px; }
-  .label { font-size:14px; color:var(--soft); font-weight:600; }
-  .bal { font-size:40px; font-weight:800; letter-spacing:-.5px; margin-top:2px; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Manrope',-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size:17px; line-height:1.5; display:flex; justify-content:center; -webkit-font-smoothing:antialiased; }
+  main { width:100%; max-width:460px; padding-bottom:24px; }
+  .hd { background-color:var(--indigo); background-image:var(--pattern); background-size:56px 56px; color:#fff; padding:26px 22px 64px; border-radius:0 0 30px 30px; }
+  .shop { font-size:15px; font-weight:700; opacity:.85; display:flex; align-items:center; gap:10px; }
+  .shop::before { content:"M"; width:28px; height:28px; border-radius:9px; background:#fff; color:var(--indigo); display:grid; place-items:center; font-weight:800; font-size:14px; }
+  h1 { font-size:30px; font-weight:800; letter-spacing:-.035em; margin:22px 0 0; line-height:1.15; }
+  .body { padding:0 18px; margin-top:-40px; }
+  .card { background:var(--bg); border:1px solid var(--line); border-radius:22px; padding:20px; margin-bottom:14px; box-shadow:0 18px 30px -22px rgba(20,26,51,.35); }
+  .label { font-size:14px; color:var(--soft); font-weight:700; }
+  .bal { font-size:46px; font-weight:800; letter-spacing:-.045em; margin-top:2px; font-variant-numeric:tabular-nums; }
   .bal.owe { color:var(--red); } .bal.clear { color:var(--green); }
-  .row { display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
+  .row { display:flex; justify-content:space-between; gap:12px; padding:14px 0; border-top:1px solid var(--line); }
   .row:first-of-type { border-top:none; }
   .item { font-weight:700; } .meta { font-size:14px; color:var(--soft); }
-  .amt { text-align:right; white-space:nowrap; font-weight:700; }
-  .done { color:var(--green); font-size:14px; font-weight:700; }
-  .pay { white-space:pre-wrap; font-weight:700; font-size:19px; margin-top:6px; }
-  a.call { display:block; text-align:center; background:var(--primary); color:#fff; text-decoration:none; padding:15px; border-radius:14px; font-weight:800; margin-top:12px; }
-  footer { text-align:center; font-size:13px; color:var(--soft); margin-top:22px; }
-  footer a { color:inherit; }
-  .msg { text-align:center; padding:40px 10px; color:var(--soft); }
+  .amt { text-align:right; white-space:nowrap; font-weight:800; font-variant-numeric:tabular-nums; }
+  .done { color:var(--green); font-size:14px; font-weight:800; }
+  .pay { white-space:pre-wrap; font-weight:800; font-size:19px; margin-top:8px; background:var(--panel); border-radius:14px; padding:14px 16px; }
+  a.call { display:block; text-align:center; background:var(--indigo); color:#fff; text-decoration:none; padding:17px; border-radius:16px; font-weight:800; margin-top:6px; box-shadow:0 16px 26px -16px rgba(27,36,102,.8); }
+  footer { text-align:center; font-size:13px; color:var(--soft); margin-top:24px; }
+  footer a { color:inherit; font-weight:700; }
+  .msg { text-align:center; padding:80px 24px; color:var(--soft); }
 </style>
 </head>
 <body>
@@ -47,12 +53,12 @@
       return '<div class="row"><div><div class="item">' + esc(e.item) + '</div><div class="meta">' + esc(fmtDate(e.date)) + (e.paid > 0 && left > 0 ? " · paid " + fmt(e.paid) : "") + '</div></div>' +
         '<div class="amt">' + (left > 0 ? fmt(left) : '<span class="done">Paid ✓</span>') + (left > 0 && e.paid > 0 ? '<div class="meta">of ' + fmt(e.amount) + '</div>' : "") + '</div></div>';
     }).join("");
-    show('<div class="shop">' + esc(b.name) + '</div><h1>Hello ' + esc(d.customer) + '</h1>' +
+    show('<div class="hd"><div class="shop">' + esc(b.name) + '</div><h1>Hello, ' + esc(d.customer) + '</h1></div><div class="body">' +
       '<div class="card"><div class="label">' + (owing ? "You currently owe" : "You owe nothing") + '</div><div class="bal ' + (owing ? "owe" : "clear") + '">' + fmt(d.balance) + '</div></div>' +
       (owing && b.payInfo ? '<div class="card"><div class="label">How to pay</div><div class="pay">' + esc(b.payInfo) + '</div></div>' : "") +
       (rows ? '<div class="card"><div class="label" style="margin-bottom:4px">Your records</div>' + rows + '</div>' : "") +
       (b.phone ? '<a class="call" href="tel:' + esc(b.phone) + '">Call ' + esc(b.name) + '</a>' : "") +
-      '<footer>Kept with <a href="https://mytab.com.ng">MyTab</a></footer>');
+      '<footer>Kept with <a href="https://mytab.com.ng">MyTab</a></footer></div>');
   }
   function load(attempt) {
     if (!/^[0-9a-f]{32}$/.test(token)) { show('<div class="msg">This link isn\'t valid. Please ask the shop to send it again.</div>'); return; }

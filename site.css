@@ -1,0 +1,52 @@
+/* MyTab site: shared styles ("indigo ledger"). Used by the landing page and the legal pages. */
+:root {
+  --bg:#F3F4F9; --surface:#FFFFFF; --ink:#141A33; --ink-soft:#5B6382; --line:#E3E6F0;
+  --indigo:#1B2466; --indigo-2:#111846; --accent:#C99A3B;
+  --red:#C23A2B; --red-bg:#FBE7E3; --yellow:#8F6208; --yellow-bg:#FAEFD3; --green:#0F7F55; --green-bg:#DCF3E9;
+  --pattern:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56' fill='none' stroke='white' stroke-opacity='.10' stroke-width='1.2'%3E%3Ccircle cx='28' cy='28' r='9'/%3E%3Ccircle cx='28' cy='28' r='3.2' fill='white' fill-opacity='.10' stroke='none'/%3E%3Ccircle cx='0' cy='0' r='5'/%3E%3Ccircle cx='56' cy='0' r='5'/%3E%3Ccircle cx='0' cy='56' r='5'/%3E%3Ccircle cx='56' cy='56' r='5'/%3E%3Cpath d='M28 7v7M28 42v7M7 28h7M42 28h7'/%3E%3C/svg%3E");
+}
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--surface); color:var(--ink); font-family:'Manrope','Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased; }
+a { color:inherit; }
+img, svg { display:block; }
+:focus-visible { outline:3px solid #7C8BFF; outline-offset:3px; border-radius:6px; }
+.wrap { max-width:1120px; margin:0 auto; padding:0 24px; }
+
+/* brand + nav */
+.brand { display:inline-flex; align-items:center; gap:10px; font-weight:800; font-size:19px; letter-spacing:-.03em; text-decoration:none; }
+.tile { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; background-color:var(--indigo); background-image:var(--pattern); background-size:56px 56px; color:#fff; font-weight:800; font-size:17px; letter-spacing:0; }
+.nav { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:18px 0; }
+.nav-links { display:flex; align-items:center; gap:26px; font-size:14.5px; font-weight:600; color:var(--ink-soft); }
+.nav-links a { text-decoration:none; }
+.nav-links a:hover { color:var(--ink); }
+.btn { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; font-weight:800; font-size:15px; letter-spacing:-.01em; padding:15px 26px; border-radius:16px; border:1.5px solid transparent; cursor:pointer; font-family:inherit; }
+.btn--indigo { background:var(--indigo); color:#fff; box-shadow:0 16px 28px -16px rgba(27,36,102,.75); }
+.btn--white { background:#fff; color:var(--indigo); }
+.btn--line { border-color:rgba(255,255,255,.4); color:#fff; }
+.btn--small { padding:10px 18px; font-size:14px; border-radius:13px; }
+
+/* legal and plain documents */
+.doc { max-width:740px; margin:0 auto; padding:0 24px; }
+.doc .nav { padding:22px 0; }
+.nav-back { font-size:14px; font-weight:700; text-decoration:none; color:var(--ink-soft); }
+.doc h1 { font-weight:800; font-size:36px; letter-spacing:-.035em; line-height:1.15; margin:34px 0 8px; }
+.doc .updated { font-size:14px; color:var(--ink-soft); margin-bottom:36px; }
+.doc h2 { font-weight:800; font-size:20px; letter-spacing:-.02em; margin:38px 0 10px; }
+.doc p, .doc li { font-size:16px; line-height:1.7; }
+.doc ul, .doc ol { padding-left:22px; }
+.doc li { margin:6px 0; }
+.doc a { color:var(--indigo); font-weight:600; }
+.doc table { width:100%; border-collapse:collapse; margin:16px 0; border-radius:14px; overflow:hidden; }
+.doc th, .doc td { text-align:left; padding:12px 14px; font-size:14.5px; border-bottom:1px solid var(--line); vertical-align:top; }
+.doc th { background:var(--bg); color:var(--ink-soft); font-weight:700; }
+.doc-foot { border-top:1px solid var(--line); margin-top:56px; padding:24px 0 56px; font-size:14px; color:var(--ink-soft); }
+.doc-foot a { color:var(--ink-soft); font-weight:600; margin-right:16px; }
+.band { background-color:var(--indigo); background-image:var(--pattern); background-size:56px 56px; color:#fff; border-radius:0 0 28px 28px; }
+.band .brand, .band .nav-back { color:#fff; }
+.band .doc h1 { color:#fff; }
+.band-title { padding:6px 0 38px; }
+.band-title h1 { margin:18px 0 6px !important; color:#fff; }
+.band-title .updated { color:rgba(255,255,255,.72); margin:0; }
+@media (max-width:600px) { .doc h1 { font-size:28px; } .nav-links { display:none; } }
+@media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
