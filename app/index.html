@@ -9,13 +9,13 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-<meta name="theme-color" content="#2F6B4F" />
+<meta name="theme-color" content="#1B2466" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="MyTab" />
 <meta name="mobile-web-app-capable" content="yes" />
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap');
   :root {
     --bg:#F6F1E4; --surface:#FFFDF8; --ink:#23301F; --ink-soft:#6A7361; --line:#E4DCC6;
     --primary:#2F6B4F; --primary-dark:#1F4B37; --accent:#C6861D;
@@ -345,6 +345,127 @@
 .cl-hv--balanced{background:var(--green-bg);color:var(--green)}.cl-hv--short{background:var(--red-bg);color:var(--red)}.cl-hv--over{background:var(--yellow-bg);color:var(--yellow)}
 .cl-flag{font-size:10.5px;font-weight:800;color:var(--red);text-transform:uppercase;margin-left:6px}
 .biz-nav-btn{min-width:0}
+
+/* ===== Design layer: "indigo ledger" =====
+   adire-inspired indigo header, white paper, ruled ledger rows, one family of type (Manrope) with tabular figures */
+:root {
+  --bg:#F3F4F9; --surface:#FFFFFF; --ink:#141A33; --ink-soft:#5B6382; --line:#E3E6F0; --rule:#E3E6F0;
+  --primary:#1B2466; --primary-dark:#111846; --accent:#C99A3B;
+  --red:#C23A2B; --red-bg:#FBE7E3; --yellow:#8F6208; --yellow-bg:#FAEFD3; --green:#0F7F55; --green-bg:#DCF3E9;
+  --indigo:#1B2466; --pattern:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56' fill='none' stroke='white' stroke-opacity='.10' stroke-width='1.2'%3E%3Ccircle cx='28' cy='28' r='9'/%3E%3Ccircle cx='28' cy='28' r='3.2' fill='white' fill-opacity='.10' stroke='none'/%3E%3Ccircle cx='0' cy='0' r='5'/%3E%3Ccircle cx='56' cy='0' r='5'/%3E%3Ccircle cx='0' cy='56' r='5'/%3E%3Ccircle cx='56' cy='56' r='5'/%3E%3Cpath d='M28 7v7M28 42v7M7 28h7M42 28h7'/%3E%3C/svg%3E");
+}
+body, button, input, select, textarea { font-family:'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+body { background:#E8EAF3; color:var(--ink); -webkit-font-smoothing:antialiased; }
+#phone { border-radius:30px; border:none; box-shadow:0 40px 70px -40px rgba(20,26,51,.45), 0 0 0 1px rgba(20,26,51,.05); background:var(--surface); }
+:focus-visible { outline:3px solid #7C8BFF; outline-offset:2px; }
+
+/* header: the one memorable thing */
+.hero { background-color:var(--indigo); background-image:var(--pattern); background-size:56px 56px; color:#fff; padding:22px 22px 30px; border-radius:0 0 30px 30px; }
+.hero--owe, .hero[style*="background"] { background-image:var(--pattern); }
+.brand-name { font-family:'Manrope',system-ui,sans-serif; font-weight:800; font-size:17px; letter-spacing:-.02em; opacity:1; display:flex; align-items:center; gap:10px; }
+.hero-label { font-size:13px; font-weight:600; color:rgba(255,255,255,.72); margin-top:20px; }
+.hero-amount { display:block; font-family:'Manrope',system-ui,sans-serif; font-weight:800; font-size:46px; line-height:1.08; letter-spacing:-.035em; border:0; padding:0; margin-top:4px; font-variant-numeric:tabular-nums; }
+.hero-amount ~ .hero-label { margin-top:8px; }
+.hero .iconbtn, .biz-gear { width:40px; height:40px; border-radius:13px; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.10); color:#fff; }
+.biz-owehint { color:rgba(255,255,255,.82); font-weight:600; font-size:13px; margin-top:8px; }
+.biz-owehint--good { color:#7EE7B8; }
+.biz-plan { border-radius:999px; font-size:10.5px; font-weight:800; padding:3px 10px; background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.3); letter-spacing:.02em; }
+.biz-plan--pro { background:var(--accent); color:#2A1D06; border-color:var(--accent); }
+.cl-pill { background:#fff; color:var(--indigo); border:0; font-weight:800; }
+
+/* type */
+.grow-amount, .balance-amount, .entry-amount, .amount-display, .biz-line-total, .biz-hist-amt, .biz-row-amt, .biz-stat b, .splash-brand { font-family:'Manrope',system-ui,sans-serif; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+.balance-amount { font-size:40px; font-weight:800; letter-spacing:-.035em; }
+.quickadd-label { font-size:13px; font-weight:700; color:var(--ink-soft); text-transform:none; letter-spacing:0; }
+.topbar-title { font-weight:800; letter-spacing:-.01em; }
+
+/* segmented tabs */
+.tabs { background:var(--bg); border-radius:15px; padding:4px; margin:20px 20px 0; }
+.tab { border-radius:11px; font-weight:700; color:var(--ink-soft); }
+.tab--active { background:#fff; color:var(--indigo); box-shadow:0 1px 2px rgba(20,26,51,.10), 0 4px 10px -6px rgba(20,26,51,.25); }
+.searchbar { background:var(--bg); border:0; border-radius:14px; margin:12px 20px 0; }
+
+/* customer ledger rows with an initial */
+.list { padding:6px 20px 120px; }
+.list .grow { background:transparent; border-radius:0; border-bottom:1px solid var(--line); padding:14px 0; gap:14px; min-height:72px; }
+.grow-dot { display:none; }
+.grow-av { width:46px; height:46px; border-radius:50%; display:grid; place-items:center; flex:none; font-weight:800; font-size:17px; background:var(--bg); color:var(--indigo); }
+.list .grow--red .grow-av { background:var(--red-bg); color:var(--red); }
+.list .grow--yellow .grow-av { background:var(--yellow-bg); color:var(--yellow); }
+.list .grow--green .grow-av { background:var(--green-bg); color:var(--green); }
+.grow-name { font-weight:700; font-size:17px; letter-spacing:-.01em; }
+.grow-age { font-weight:600; font-size:13px; }
+.list .grow .grow-amount { font-size:18px; font-weight:800; }
+.list .grow--green .grow-amount { font-weight:700; }
+.glance-note { font-size:13px; color:var(--ink-soft); margin:14px 0 2px; font-weight:600; }
+.tr-tag { border-radius:999px; }
+
+/* banners */
+#homeOverdueBanner, #homeUpgradeBanner { border-radius:18px !important; border:0 !important; margin-top:16px !important; }
+#homeOverdueBanner { background:var(--red-bg) !important; }
+#homeUpgradeBanner { background:var(--yellow-bg) !important; }
+
+/* cards */
+.biz-card, .balance-card, .biz-stat, .biz-line { background:var(--bg); border:0; border-radius:20px; box-shadow:none; }
+.balance-card { margin:18px 20px; padding:22px 18px; }
+.biz-line { background:#fff; border:1px solid var(--line); border-radius:16px; }
+.biz-stat { padding:16px; }
+.biz-stat b { font-size:22px; font-weight:800; }
+.wa-btn { border-radius:999px; padding:11px 18px; font-size:14px; background:#E6F8EE; color:#0B6B44; }
+
+/* inputs */
+.form input, .stage-form input, .stage-form select, .plain-input, .biz-full, .biz-inline input, .cl-f input, .cl-addrow input, .custom-row { border:1.5px solid var(--line); border-radius:14px; background:#fff; }
+input:focus, select:focus, textarea:focus { border-color:var(--indigo); outline:none; box-shadow:0 0 0 4px rgba(27,36,102,.12); }
+.custom-row:focus-within { border-color:var(--indigo); box-shadow:0 0 0 4px rgba(27,36,102,.12); }
+
+/* buttons */
+.primary-btn { background:var(--indigo); border-radius:16px; padding:17px; font-size:16px; font-weight:800; letter-spacing:-.01em; box-shadow:0 14px 24px -14px rgba(27,36,102,.7); }
+.settle-btn, .settle-full, .custom-go { background:var(--indigo); border-radius:14px; font-weight:800; }
+.settle-btn--danger { background:var(--red); }
+.ghost-btn { border:1.5px solid var(--line); border-radius:14px; color:var(--ink); font-weight:700; }
+.chip { border:1.5px solid var(--line); border-radius:999px; background:#fff; padding:10px 16px; font-weight:700; }
+.chip--active { background:var(--indigo); border-color:var(--indigo); color:#fff; }
+.chip--ghost { border-style:dashed; color:var(--ink-soft); }
+.iconbtn { border-radius:13px; border:1.5px solid var(--line); }
+.fab { background:var(--indigo); color:#fff; box-shadow:0 16px 28px -12px rgba(27,36,102,.7); }
+.fab svg { color:#fff; }
+.biz-mic { background:var(--yellow-bg); color:var(--yellow); border:0; border-radius:999px; }
+.biz-mic--on { background:var(--accent); color:#2A1D06; }
+
+/* navigation */
+.biz-nav { background:rgba(255,255,255,.96); backdrop-filter:blur(10px); border-top:1px solid var(--line); box-shadow:none; }
+.biz-nav-btn { color:#8A91AD; font-weight:700; }
+.biz-nav-btn--on { color:var(--indigo); }
+.biz-nav-btn--on::before { width:26px; height:3px; margin-left:-13px; border-radius:0 0 4px 4px; background:var(--indigo); }
+
+/* detail entries */
+.entries { padding:0 20px; }
+.entry { border-bottom:1px solid var(--line); }
+.tag { border-radius:999px; }
+.entry-icon-btn { border-radius:9px; }
+
+/* shop close */
+.cl-verdict { border:0; border-radius:22px; padding:20px 16px; }
+.cl-vtitle { font-size:30px; font-weight:800; letter-spacing:-.03em; }
+.cl-seg { border-radius:999px; border:1.5px solid var(--line); }
+.cl-seg button.on { background:var(--indigo); }
+.cl-expect { border-radius:12px; font-weight:600; }
+.cl-alert { border:0; border-radius:16px; }
+.cl-h { border-bottom-color:var(--line); }
+
+/* sign-in / welcome */
+.splash-brand { font-weight:800; font-size:40px; letter-spacing:-.04em; color:var(--indigo); }
+.splash-brand::before { content:"M"; display:grid; place-items:center; width:72px; height:72px; margin:0 auto 18px; border-radius:22px; background-color:var(--indigo); background-image:var(--pattern); background-size:56px 56px; color:#fff; font-size:34px; letter-spacing:0; box-shadow:0 18px 30px -16px rgba(27,36,102,.7); }
+.splash-tag { font-size:15px; font-weight:600; }
+.pin-dot { border-color:#C7CCE0; }
+.toast { background:var(--ink); color:#fff; border-radius:999px; font-weight:700; }
+.biz-guide-card { border-radius:24px; }
+.empty-title { font-weight:800; }
+
+.cl-addrow { flex-wrap:wrap; }
+.cl-addrow input { flex:1 1 100%; }
+.cl-addrow .settle-btn { flex:1 1 auto; }
+.biz-locked { background:var(--bg); border:0; border-radius:20px; }
 </style>
 </head>
 <body>
@@ -1080,7 +1201,7 @@ document.addEventListener("visibilitychange", () => {
 
       let listHtml = "";
       if (tab === "today") {
-        listHtml += `<div class="glance-note">Start at the top: the biggest and oldest debts come first</div>`;
+        listHtml += `<div class="glance-note">Collect from the top first</div>`;
         if (today.length === 0) listHtml += `<div class="empty"><div class="empty-title">Nobody owes you right now</div></div>`;
         listHtml += today.map((d) => glanceRow(d, false)).join("");
       } else {
@@ -1144,7 +1265,7 @@ document.addEventListener("visibilitychange", () => {
       if (bal === 0 && !showSettled) return "";
       const cls = bal === 0 ? "green" : status(d);
       return `<button class="grow grow--${cls}" data-open="${d.id}">
-        <span class="grow-dot"></span>
+        <span class="grow-av">${esc((d.name.trim().charAt(0) || "?").toUpperCase())}</span>
         <span class="grow-name">${esc(d.name)}${bal > 0 ? `<small class="grow-age">${bzAge(d)}</small>` : ""}${bal > 0 ? bzTrustTag(d) : ""}</span>
         <span class="grow-amount">${bal === 0 ? "Settled" : fmt(bal)}</span>
       </button>`;
@@ -1231,7 +1352,7 @@ document.addEventListener("visibilitychange", () => {
         <div class="entry-row" data-toggle-settle="${!e.paid ? e.id : ""}">
           <div class="entry-main">
             <div class="entry-item">${esc(e.item)}</div>
-            <div class="entry-date">${e.date}</div>
+            <div class="entry-date">${clPlain(e.date)}</div>
           </div>
           <div class="entry-right">
             <div class="entry-amount${e.paid ? " entry-amount--paid" : ""}">${fmt(e.amount)}</div>
@@ -2451,6 +2572,8 @@ const bzTotalOwe = () => bizData().creditors.reduce((a, c) => a + Math.max(0, bz
 function bzOweHint() {
   if (bzIsStaff()) return "";
   const t = bzTotalOwe(); let h = "";
+  const who = debtors.filter((d) => balanceOf(d) > 0).length;
+  if (who > 0) h += `<div class="biz-owehint">${who} ${who === 1 ? "person owes" : "people owe"} you</div>`;
   if (bzStats && bzStats.recoveredMonth > 0) h += `<div class="biz-owehint biz-owehint--good">Got back this month: ${fmt(bzStats.recoveredMonth)}</div>`;
   if (t > 0) h += `<div class="biz-owehint">You owe ${fmt(t)}</div>`;
   return h + clPill();
@@ -2500,7 +2623,7 @@ function bzTrustTag(d) {
 function bzTrustCard(d) {
   if (bzIsStaff()) return "";
   const p = trustProfile(d, bzToday());
-  const room = p.room === null ? "" : p.room > 0 ? ` Sensible to add up to ${fmt(p.room)} more.` : " Collect before giving more.";
+  const room = p.room === null ? "" : p.room > 0 ? ` Sensible to add up to ${fmt(p.room)} more.` : p.tier === "risky" ? " Collect before giving more." : " Owes more than they have paid before. Collect first.";
   return `<div class="tr-card tr-card--${p.tier}"><span class="tr-pill">${p.label}</span><span class="tr-why">${esc(p.reason)}${room}</span></div>`;
 }
 function bzCreditGate(d, amount) {
@@ -2703,7 +2826,7 @@ function renderOwe() {
       <div class="biz-row-amt${dim ? " biz-row-amt--dim" : ""}">${dim ? "Cleared" : fmt(bzCreditorBalance(c))}</div>
     </button>`).join("");
   return `<div class="screen">
-    <div class="hero" style="background:#7A3B2E;">
+    <div class="hero" style="background-color:#3A1D3F;">
       ${bzHeroTop()}
       <div class="hero-label">Total you owe</div>
       <div class="hero-amount">${fmt(bzTotalOwe())}</div>
@@ -3197,7 +3320,7 @@ async function bzLoadStats() {
 }
 function bzRecoveredCard() {
   const s = bzStats; if (!s) return "";
-  return `<div class="biz-card" style="margin-top:0;background:#E1EEE3;border-color:#C9DECF;">
+  return `<div class="biz-card" style="margin-top:0;background:var(--green-bg);border-color:var(--line);">
     <div class="biz-dim">Money you got back this month</div>
     <div style="font-size:28px;font-weight:800;color:var(--green);">${fmt(s.recoveredMonth)}</div>
     <div class="biz-dim">${fmt(s.recoveredToday)} today</div>
@@ -3362,7 +3485,7 @@ function renderStaffMgr() {
       </div>
       ${smEditId === s.id ? `<div class="biz-inline"><input data-b="smEditCode" data-ev="input" type="tel" inputmode="numeric" maxlength="4" placeholder="New 4-digit code" value="${esc(smEditCode)}" /><button class="settle-btn" data-b="smEditSave">Save</button></div>` : ""}
     </div>`).join("");
-  const last = smLast ? `<div class="biz-card" style="background:#E1EEE3;border-color:#C9DECF;">
+  const last = smLast ? `<div class="biz-card" style="background:var(--green-bg);border-color:var(--line);">
       <div style="font-weight:800;">${esc(smLast.name)} can now sign in ✓</div>
       <div class="biz-dim" style="margin:4px 0 10px;">Send them how to get in. Their code is <b style="color:var(--ink)">${esc(smLast.code)}</b>.</div>
       <button class="settle-btn" data-b="smSend" style="width:100%;">Send on WhatsApp</button>
