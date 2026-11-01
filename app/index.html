@@ -299,6 +299,17 @@
     .screen { min-height:100vh; min-height:100dvh; }
     .biz-nav { max-width:none; }
   }
+
+/* trust rating */
+.tr-tag{display:inline-block;align-self:flex-start;margin:2px 0 0;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:6px;vertical-align:middle}
+.tr-tag--risky{background:var(--red-bg);color:var(--red)}
+.tr-tag--watch{background:var(--yellow-bg);color:var(--yellow)}
+.tr-card{display:flex;align-items:flex-start;gap:10px;margin:12px 0 0;padding:10px 12px;border-radius:12px;text-align:left;font-size:13.5px;line-height:1.35;background:var(--bg);border:1px solid var(--line)}
+.tr-pill{flex:none;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:8px;background:var(--line);color:var(--ink)}
+.tr-card--good .tr-pill{background:var(--green-bg);color:var(--green)}
+.tr-card--watch .tr-pill{background:var(--yellow-bg);color:var(--yellow)}
+.tr-card--risky .tr-pill{background:var(--red-bg);color:var(--red)}
+.tr-why{color:var(--ink-soft);font-weight:500}
 </style>
 </head>
 <body>
@@ -860,6 +871,7 @@ document.addEventListener("visibilitychange", () => {
 
     function addEntry(item, amount) {
       const d = debtors.find((x) => x.id === selectedId);
+      if (!bzCreditGate(d, amount)) return;
       const id = crypto.randomUUID();
       const date = todayISO();
       d.entries.push({ id, item, amount, date, paid: false, paidAmount: 0 });
@@ -1024,14 +1036,14 @@ document.addEventListener("visibilitychange", () => {
 
     function renderHome() {
       const totalOwed = debtors.reduce((s, d) => s + balanceOf(d), 0);
-      const today = [...debtors].filter((d) => balanceOf(d) > 0).sort((a, b) => balanceOf(b) - balanceOf(a));
+      const today = bzChaseOrder(debtors.filter((d) => balanceOf(d) > 0));
       const q = query.trim().toLowerCase();
       const all = [...(q ? debtors.filter((d) => d.name.toLowerCase().includes(q)) : debtors)].sort((a, b) => balanceOf(b) - balanceOf(a));
       const birthdaysToday = todaysBirthdays();
 
       let listHtml = "";
       if (tab === "today") {
-        listHtml += `<div class="glance-note">Who to collect from, tap a name to open</div>`;
+        listHtml += `<div class="glance-note">Start at the top: the biggest and oldest debts come first</div>`;
         if (today.length === 0) listHtml += `<div class="empty"><div class="empty-title">Nobody owes you right now</div></div>`;
         listHtml += today.map((d) => glanceRow(d, false)).join("");
       } else {
@@ -1096,7 +1108,7 @@ document.addEventListener("visibilitychange", () => {
       const cls = bal === 0 ? "green" : status(d);
       return `<button class="grow grow--${cls}" data-open="${d.id}">
         <span class="grow-dot"></span>
-        <span class="grow-name">${esc(d.name)}${bal > 0 ? `<small class="grow-age">${bzAge(d)}</small>` : ""}</span>
+        <span class="grow-name">${esc(d.name)}${bal > 0 ? `<small class="grow-age">${bzAge(d)}</small>` : ""}${bal > 0 ? bzTrustTag(d) : ""}</span>
         <span class="grow-amount">${bal === 0 ? "Settled" : fmt(bal)}</span>
       </button>`;
     }
@@ -1125,6 +1137,7 @@ document.addEventListener("visibilitychange", () => {
             <div class="balance-label">Balance owed</div>
             <div class="balance-amount${bal === 0 ? " balance-amount--clear" : ""}">${fmt(bal)}</div>
             <button class="wa-btn" data-b="shareStmt" style="border:none; cursor:pointer; font-family:inherit;">${icon.wa} Send reminder</button>
+            ${bzTrustCard(d)}
             ${d.birthday ? `<div class="stage-hint" style="margin-top:8px;">🎂 Birthday: ${esc(d.birthday)}</div>` : ""}
           </div>
           <div class="entries">${entries}</div>
@@ -2194,6 +2207,64 @@ function parseOweSpeech(text, knownNames) {
 }
 
 
+/* Trust rating: how reliable is this customer, judged only from what the shop owner recorded.
+   Pure functions. No network, no AI, works offline. The owner stays in charge: this only advises. */
+function trDays(from, today) { return Math.floor((Date.parse(today) - Date.parse(from)) / 86400000); }
+function trRound(n) { return Math.max(0, Math.round(n / 100) * 100); }
+
+function trustProfile(d, today) {
+  const es = (d && d.entries) || [];
+  const open = es.filter((e) => !e.paid && e.amount - e.paidAmount > 0);
+  const paid = es.filter((e) => e.paid || e.amount - e.paidAmount <= 0);
+  const owed = open.reduce((a, e) => a + (e.amount - e.paidAmount), 0);
+  const ages = open.map((e) => trDays(e.date, today));
+  const oldest = ages.length ? Math.max(...ages) : 0;
+  const late = ages.filter((a) => a > 14).length;
+  const proven = paid.reduce((m, e) => Math.max(m, e.amount), 0);
+
+  let tier, label, reason;
+  if (es.length === 0) {
+    tier = "new"; label = "New"; reason = "No credit given yet.";
+  } else if (oldest > 30 || late >= 2) {
+    tier = "risky"; label = "Risky";
+    reason = oldest > 30 ? "Has owed for " + oldest + " days." : late + " credits are more than 2 weeks old.";
+  } else if (oldest > 14 || open.length >= 3) {
+    tier = "watch"; label = "Watch";
+    reason = oldest > 14 ? "Has owed for " + oldest + " days." : open.length + " credits are still open.";
+  } else if (paid.length >= 1) {
+    tier = "good"; label = "Reliable";
+    reason = "Has paid " + paid.length + " of " + es.length + " credits.";
+  } else {
+    tier = "new"; label = "New"; reason = "No payment history yet. Start small.";
+  }
+
+  // how much more credit is sensible
+  let room = null;
+  if (tier === "risky") room = 0;
+  else if (tier === "watch") room = trRound(Math.max(0, (proven || 2000) - owed));
+  else if (tier === "good") room = trRound(Math.max(proven * 2 - owed, 0));
+  // new customers: no limit, the owner decides
+
+  // chase order: big and old first, fresh credit last
+  const f = oldest <= 3 ? 0.25 : oldest <= 14 ? 1 : 2 + Math.min(oldest - 14, 46) / 23;
+  const priority = owed * f;
+
+  return { tier, label, reason, owed, oldest, paidCount: paid.length, openCount: open.length, proven, room, priority };
+}
+
+/* Should we stop and ask before giving this much more credit? Returns text, or "" if all is fine. */
+function trustWarning(d, amount, today, money) {
+  const p = trustProfile(d, today);
+  const m = money || ((n) => "₦" + Number(n).toLocaleString("en-NG"));
+  if (p.tier === "risky") {
+    return d.name + " already owes " + m(p.owed) + " (" + p.oldest + " days). Giving more credit is risky.\n\nGive it anyway?";
+  }
+  if (p.tier === "watch" && p.room !== null && amount > p.room) {
+    return d.name + " is running late (" + p.oldest + " days, owes " + m(p.owed) + "). A safer amount to add now is about " + m(p.room) + ".\n\nGive " + m(amount) + " anyway?";
+  }
+  return "";
+}
+
 /* =====================================================================
    BETA: Sales tracker, "I owe", Summary  (data lives on this phone first)
    ===================================================================== */
@@ -2282,6 +2353,26 @@ function bzAge(d) {
   return n <= 0 ? "Owing since today" : n === 1 ? "Owing 1 day" : "Owing " + n + " days";
 }
 
+/* ---- trust rating (see trust.js) ---- */
+const bzToday = () => todayISO();
+function bzTrustTag(d) {
+  if (bzIsStaff()) return "";
+  const p = trustProfile(d, bzToday());
+  return p.tier === "risky" || p.tier === "watch" ? `<small class="tr-tag tr-tag--${p.tier}">${p.label}</small>` : "";
+}
+function bzTrustCard(d) {
+  if (bzIsStaff()) return "";
+  const p = trustProfile(d, bzToday());
+  const room = p.room === null ? "" : p.room > 0 ? ` Sensible to add up to ${fmt(p.room)} more.` : " Collect before giving more.";
+  return `<div class="tr-card tr-card--${p.tier}"><span class="tr-pill">${p.label}</span><span class="tr-why">${esc(p.reason)}${room}</span></div>`;
+}
+function bzCreditGate(d, amount) {
+  if (bzIsStaff()) return true;
+  const msg = trustWarning(d, Number(amount) || 0, bzToday(), fmt);
+  return !msg || confirm(msg);
+}
+const bzChaseOrder = (list) => [...list].sort((a, b) => trustProfile(b, bzToday()).priority - trustProfile(a, bzToday()).priority);
+
 /* ---- bottom navigation ---- */
 const BZ_NAV_VIEWS = ["home", "sales", "owe", "summary", "staffme"];
 function bzNav() {
@@ -2338,7 +2429,8 @@ function bzRecordSale() {
     if (!isPro() && billingStatus && billingStatus.customerLimit != null && debtors.length >= billingStatus.customerLimit) { flash("Free customer limit reached"); goUpgrade(); return; }
     custId = bzNewCustomer(saleNewName.trim(), saleNewPhone.trim()); custName = saleNewName.trim();
   } else if (saleCust) {
-    const d = debtors.find((x) => x.id === saleCust); if (d) { custId = d.id; custName = d.name; }
+    const d = debtors.find((x) => x.id === saleCust);
+    if (d) { if (!salePaid && !bzCreditGate(d, bzCartTotal())) return; custId = d.id; custName = d.name; }
   }
   saleCart.forEach((l) => {
     if (!l.productId) {
