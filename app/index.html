@@ -310,6 +310,41 @@
 .tr-card--watch .tr-pill{background:var(--yellow-bg);color:var(--yellow)}
 .tr-card--risky .tr-pill{background:var(--red-bg);color:var(--red)}
 .tr-why{color:var(--ink-soft);font-weight:500}
+
+/* shop close */
+.cl-pill{display:block;margin:10px 0 0;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);color:#F3EFE1;border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.cl-card{margin-top:8px}
+.cl-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:14px;border-bottom:1px dashed var(--line)}
+.cl-row:last-child{border-bottom:none}
+.cl-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0 6px 10px;font-size:13px;color:var(--ink-soft)}
+.cl-seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none}
+.cl-seg button{border:none;background:var(--surface);padding:7px 10px;font:inherit;font-size:12px;font-weight:700;color:var(--ink-soft);cursor:pointer;min-height:34px}
+.cl-seg button.on{background:var(--primary);color:#fff}
+.cl-cats{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.cl-addrow{display:flex;gap:8px;align-items:center}
+.cl-addrow input,.cl-f input{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
+.cl-addrow input{flex:1;min-width:0}
+.cl-f{display:block;font-size:13px;font-weight:700;margin-top:10px}
+.cl-f input{margin-top:5px}
+.cl-expect{margin-top:8px;font-size:13.5px;background:var(--yellow-bg);color:var(--yellow);border-radius:10px;padding:8px 10px}
+.cl-people{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:8px;font-size:12.5px;color:var(--ink-soft)}
+.cl-verdict{border-radius:16px;padding:16px;margin:0 0 14px;text-align:center;border:1px solid var(--line)}
+.cl-verdict--balanced{background:var(--green-bg);color:var(--green)}
+.cl-verdict--short{background:var(--red-bg);color:var(--red)}
+.cl-verdict--over{background:var(--yellow-bg);color:var(--yellow)}
+.cl-vtitle{font-size:26px;font-weight:800}
+.cl-vline{font-size:14px;margin-top:4px;color:var(--ink)}
+.cl-tip,.cl-pattern,.cl-bankline{font-size:13px;margin-top:8px;color:var(--ink-soft);text-align:left}
+.cl-pattern{font-weight:700;color:var(--red)}
+.cl-sealed{font-size:12px;margin-top:10px;color:var(--ink-soft)}
+.cl-alert{background:var(--red-bg);color:var(--red);border:1px solid var(--red);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.cl-alert div{margin-top:4px;color:var(--ink)}
+.cl-h{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.cl-h:last-child{border-bottom:none}
+.cl-hv{font-size:12px;font-weight:800;padding:3px 8px;border-radius:8px}
+.cl-hv--balanced{background:var(--green-bg);color:var(--green)}.cl-hv--short{background:var(--red-bg);color:var(--red)}.cl-hv--over{background:var(--yellow-bg);color:var(--yellow)}
+.cl-flag{font-size:10.5px;font-weight:800;color:var(--red);text-transform:uppercase;margin-left:6px}
+.biz-nav-btn{min-width:0}
 </style>
 </head>
 <body>
@@ -900,6 +935,7 @@ document.addEventListener("visibilitychange", () => {
     function settleEntry(entryId, amt) {
       const d = debtors.find((x) => x.id === selectedId);
       const e = d.entries.find((x) => x.id === entryId);
+      clLogCollect(d, Math.min(amt, e.amount - e.paidAmount));
       e.paidAmount = Math.min(e.amount, e.paidAmount + amt);
       e.paid = e.paidAmount >= e.amount;
       saveDebtors();
@@ -935,6 +971,7 @@ document.addEventListener("visibilitychange", () => {
       else if (view === "reports") root.innerHTML = renderReports();
       else if (view === "staffme") root.innerHTML = renderStaffMe();
       else if (view === "staffmgr") root.innerHTML = renderStaffMgr();
+      else if (view === "close") root.innerHTML = renderClose();
       else if (view === "sales") root.innerHTML = renderSales();
       else if (view === "owe") root.innerHTML = renderOwe();
       else if (view === "oweDetail") root.innerHTML = renderOweDetail();
@@ -2265,6 +2302,106 @@ function trustWarning(d, amount, today, money) {
   return "";
 }
 
+/* Shop Close: the nightly "does it add up?" maths. Pure functions, no network, works offline.
+   sale:    { id, date, total, paid, method?: "cash"|"transfer", by? }
+   expense: { id, date, amount, method?: "cash"|"transfer" }
+   collect: { id, date, amount, method?: "cash"|"transfer" }   (a customer paid back a debt)
+   close:   { id, date, ts, opening, counted, keep, bank, expected, gap, bankGap, snap }            */
+const CL_TOLERANCE = 100; // naira: below this we call it balanced (rounding, small change)
+
+function clDay(date, data) {
+  const S = (data.sales || []).filter((x) => x.date === date);
+  const E = (data.expenses || []).filter((x) => x.date === date);
+  const C = (data.collects || []).filter((x) => x.date === date);
+  const r = { sales: S.length, salesTotal: 0, cashSales: 0, transferSales: 0, creditSales: 0, collectedCash: 0, collectedTransfer: 0, spentCash: 0, spentTransfer: 0, byPerson: {} };
+  S.forEach((s) => {
+    const t = Number(s.total) || 0; r.salesTotal += t;
+    if (!s.paid) r.creditSales += t; else if (s.method === "transfer") r.transferSales += t; else r.cashSales += t;
+    const who = s.by || "";
+    const p = (r.byPerson[who] = r.byPerson[who] || { count: 0, total: 0, credit: 0 });
+    p.count++; p.total += t; if (!s.paid) p.credit += t;
+  });
+  C.forEach((c) => { const a = Number(c.amount) || 0; if (c.method === "transfer") r.collectedTransfer += a; else r.collectedCash += a; });
+  E.forEach((e) => { const a = Number(e.amount) || 0; if (e.method === "transfer") r.spentTransfer += a; else r.spentCash += a; });
+  r.spent = r.spentCash + r.spentTransfer;
+  r.collected = r.collectedCash + r.collectedTransfer;
+  r.cashIn = r.cashSales + r.collectedCash;
+  r.transferIn = r.transferSales + r.collectedTransfer;
+  return r;
+}
+
+/* What should be in the drawer / what the bank should have received. opening = cash at the start of the day. */
+function clExpected(day, opening) {
+  return { cash: (Number(opening) || 0) + day.cashIn - day.spentCash, transfer: day.transferIn };
+}
+
+function clVerdict(gap) {
+  if (gap === null || gap === undefined || isNaN(gap)) return "unknown";
+  if (Math.abs(gap) <= CL_TOLERANCE) return "balanced";
+  return gap < 0 ? "short" : "over";
+}
+
+/* Build the sealed record for a day. input: { opening, counted, keep, bank } (numbers; bank may be null) */
+function clBuild(date, data, input, id, ts) {
+  const day = clDay(date, data);
+  const opening = Number(input.opening) || 0, counted = Number(input.counted) || 0;
+  const ex = clExpected(day, opening);
+  const bank = input.bank === null || input.bank === "" || input.bank === undefined ? null : Number(input.bank);
+  return {
+    id, date, ts, opening, counted,
+    keep: input.keep === "" || input.keep === undefined || input.keep === null ? counted : Number(input.keep),
+    bank, expected: ex,
+    gap: counted - ex.cash,
+    bankGap: bank === null ? null : bank - ex.transfer,
+    snap: { sales: day.sales, salesTotal: day.salesTotal, spent: day.spent, collected: day.collected, credit: day.creditSales },
+  };
+}
+
+/* Has anything for a closed day changed since it was sealed? Returns a list of plain sentences. */
+function clChanges(close, data, money) {
+  const m = money || ((n) => "₦" + Number(n).toLocaleString("en-NG"));
+  const now = clDay(close.date, data), s = close.snap || {}, out = [];
+  if (now.sales !== s.sales || now.salesTotal !== s.salesTotal) {
+    const d = now.sales - s.sales;
+    out.push("Sales were " + m(s.salesTotal) + " when you closed, now " + m(now.salesTotal) + (d < 0 ? " (" + -d + " removed)" : d > 0 ? " (" + d + " added)" : " (changed)") + ".");
+  }
+  if (now.spent !== s.spent) out.push("Money spent was " + m(s.spent) + " when you closed, now " + m(now.spent) + ".");
+  if (now.collected !== s.collected) out.push("Customer payments were " + m(s.collected) + " when you closed, now " + m(now.collected) + ".");
+  return out;
+}
+
+/* Days in a row that were closed, counting back from today (or yesterday if today is not closed yet). */
+function clStreak(closes, today, addDays) {
+  const set = new Set(closes.map((c) => c.date));
+  let d = set.has(today) ? today : addDays(today, -1), n = 0;
+  while (set.has(d)) { n++; d = addDays(d, -1); }
+  return n;
+}
+
+/* Short on how many of the last N closes? */
+function clRecentShort(closes, n) {
+  const last = [...closes].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, n);
+  return { checked: last.length, short: last.filter((c) => clVerdict(c.gap) === "short").length };
+}
+
+/* Monthly Shop Record. month = "YYYY-MM". owed = what customers owe at the moment. */
+function clMonth(month, data, closes, owed, daysInMonthSoFar) {
+  const dates = new Set();
+  (data.sales || []).forEach((s) => { if (s.date.startsWith(month)) dates.add(s.date); });
+  const rec = { sales: 0, collected: 0, spent: 0, credit: 0, activeDays: dates.size };
+  dates.forEach((d) => { const x = clDay(d, data); rec.sales += x.salesTotal; rec.collected += x.collected; rec.spent += x.spent; rec.credit += x.creditSales; });
+  (data.expenses || []).forEach((e) => { if (e.date.startsWith(month) && !dates.has(e.date)) rec.spent += Number(e.amount) || 0; });
+  (data.collects || []).forEach((c) => { if (c.date.startsWith(month) && !dates.has(c.date)) rec.collected += Number(c.amount) || 0; });
+  const mc = closes.filter((c) => c.date.startsWith(month));
+  rec.closed = mc.length;
+  rec.balanced = mc.filter((c) => clVerdict(c.gap) === "balanced").length;
+  rec.short = mc.filter((c) => clVerdict(c.gap) === "short").length;
+  rec.shortTotal = mc.filter((c) => clVerdict(c.gap) === "short").reduce((a, c) => a + -c.gap, 0);
+  rec.owed = owed;
+  rec.days = daysInMonthSoFar;
+  return rec;
+}
+
 /* =====================================================================
    BETA: Sales tracker, "I owe", Summary  (data lives on this phone first)
    ===================================================================== */
@@ -2277,7 +2414,7 @@ function bizData() {
   if (_biz && _bizKey === k) return _biz;
   let d = null;
   try { d = JSON.parse(localStorage.getItem(k)); } catch (e) {}
-  _biz = Object.assign({ products: [], sales: [], creditors: [] }, d || {});
+  _biz = Object.assign({ products: [], sales: [], creditors: [], expenses: [], collects: [], closes: [] }, d || {});
   _bizKey = k;
   return _biz;
 }
@@ -2316,11 +2453,11 @@ function bzOweHint() {
   const t = bzTotalOwe(); let h = "";
   if (bzStats && bzStats.recoveredMonth > 0) h += `<div class="biz-owehint biz-owehint--good">Got back this month: ${fmt(bzStats.recoveredMonth)}</div>`;
   if (t > 0) h += `<div class="biz-owehint">You owe ${fmt(t)}</div>`;
-  return h;
+  return h + clPill();
 }
 
 /* ---- UI state ---- */
-let saleCart = [], salePaid = true, saleCust = "", saleNewName = "", saleNewPhone = "", saleHeard = "";
+let saleMethod = "cash", saleCart = [], salePaid = true, saleCust = "", saleNewName = "", saleNewPhone = "", saleHeard = "";
 let npOpen = false, npName = "", npPrice = "", npUnit = "pack";
 let oweOpenId = null, oweFormOpen = false, oweForm = { name: "", phone: "", amount: "", item: "" }, oweHeard = "";
 let owePayAmt = "", oweMoreAmt = "", oweMoreItem = "";
@@ -2374,15 +2511,16 @@ function bzCreditGate(d, amount) {
 const bzChaseOrder = (list) => [...list].sort((a, b) => trustProfile(b, bzToday()).priority - trustProfile(a, bzToday()).priority);
 
 /* ---- bottom navigation ---- */
-const BZ_NAV_VIEWS = ["home", "sales", "owe", "summary", "staffme"];
+const BZ_NAV_VIEWS = ["home", "sales", "close", "owe", "summary", "staffme"];
 function bzNav() {
   const ic = {
     home: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
     sales: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>`,
     owe: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7 7 7-7"/></svg>`,
+    close: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
     summary: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>`,
   };
-  const items = bzIsStaff() ? [["home", "Owe me"], ["sales", "Sales"]] : [["home", "Owe me"], ["sales", "Sales"], ["owe", "I owe"], ["summary", "Summary"]];
+  const items = bzIsStaff() ? [["home", "Owe me"], ["sales", "Sales"]] : [["home", "Owe me"], ["sales", "Sales"], ["close", "Close"], ["owe", "I owe"], ["summary", "Summary"]];
   const cur = view === "oweDetail" ? "owe" : view;
   return `<nav class="biz-nav">${items.map(([v, l]) => `<button class="biz-nav-btn${cur === v ? " biz-nav-btn--on" : ""}" data-b="nav" data-v="${v}">${ic[v]}<span>${l}</span></button>`).join("")}</nav>`;
 }
@@ -2442,11 +2580,11 @@ function bzRecordSale() {
   const items = saleCart.map((l) => ({ productId: l.productId, name: l.name, qty: Number(l.qty), unitPrice: Number(l.unitPrice) }));
   const total = items.reduce((a, i) => a + i.qty * i.unitPrice, 0);
   const now = new Date();
-  const sale = { id: crypto.randomUUID(), ts: now.getTime(), date: bzISO(now), items, total, paid: salePaid, customerId: custId, customerName: custName, by: bzIsStaff() ? (bzGet("mytab_staff_name") || "") : "" };
+  const sale = { id: crypto.randomUUID(), ts: now.getTime(), date: bzISO(now), items, total, paid: salePaid, method: salePaid ? saleMethod : "", customerId: custId, customerName: custName, by: bzIsStaff() ? (bzGet("mytab_staff_name") || "") : "" };
   b.sales.push(sale);
   bizSave(); bzMark("sale", sale.id);
   if (!salePaid && custId) bzAddDebt(custId, items.map((i) => i.qty + " " + i.name).join(", "), total);
-  saleCart = []; saleHeard = ""; saleCust = ""; saleNewName = ""; saleNewPhone = ""; salePaid = true;
+  saleCart = []; saleHeard = ""; saleCust = ""; saleNewName = ""; saleNewPhone = ""; salePaid = true; saleMethod = "cash";
   render(); buzz(); flash("Sale recorded · " + fmt(total));
 }
 function bzSaleSummary(s) { return s.items.map((i) => i.qty + " × " + i.name).join(", "); }
@@ -2476,7 +2614,7 @@ function renderSales() {
     <div class="biz-hist">
       <div style="min-width:0;flex:1;">
         <div class="biz-hist-main">${esc(bzSaleSummary(s))}</div>
-        <div class="biz-dim">${bzTime(s.ts)}${s.by && !bzIsStaff() ? " · by " + esc(s.by) : ""}${s.customerName ? " · " + esc(s.customerName) : ""}${s.paid ? "" : ` · <b style="color:var(--yellow)">on credit</b>`}</div>
+        <div class="biz-dim">${bzTime(s.ts)}${s.by && !bzIsStaff() ? " · by " + esc(s.by) : ""}${s.customerName ? " · " + esc(s.customerName) : ""}${s.paid ? (s.method === "transfer" ? " · transfer" : "") : ` · <b style="color:var(--yellow)">on credit</b>`}</div>
       </div>
       <div class="biz-hist-amt">${fmt(s.total)}</div>
       ${bzIsStaff() ? "" : `<button class="biz-x" data-b="saleDel" data-id="${esc(s.id)}" aria-label="Delete sale">${icon.trashSm}</button>`}
@@ -2515,6 +2653,9 @@ function renderSales() {
         <button class="chip${salePaid ? " chip--active" : ""}" data-b="salePaid" data-v="1">Paid now</button>
         <button class="chip${!salePaid ? " chip--active" : ""}" data-b="salePaid" data-v="0">On credit</button>
       </div>
+      ${salePaid ? `<div class="biz-pay" style="margin-top:8px;"><span class="biz-dim" style="align-self:center;">How were you paid?</span>
+        <button class="chip${saleMethod === "cash" ? " chip--active" : ""}" data-b="saleMethod" data-v="cash">Cash</button>
+        <button class="chip${saleMethod === "transfer" ? " chip--active" : ""}" data-b="saleMethod" data-v="transfer">Transfer</button></div>` : ""}
       <div class="stage-form" style="margin:10px 0 0;gap:10px;">
         <label>${salePaid ? "Customer <span class=\"optional\">(optional, saves them to your customer list)</span>" : "Who owes you?"}
           <select data-b="saleCust" data-ev="change">${custOpts}</select></label>
@@ -2743,7 +2884,7 @@ function bzSalesCsv() {
 /* =============================== EVENTS =============================== */
 function bzFind(key) { return saleCart.find((l) => l.key === key); }
 const BZ = {
-  nav: (el) => { if (bzIsStaff() && !["home", "sales"].includes(el.dataset.v)) return; view = el.dataset.v; oweFormOpen = false; window.scrollTo(0, 0); render(); },
+  nav: (el) => { clJustClosed = false; if (bzIsStaff() && !["home", "sales"].includes(el.dataset.v)) return; view = el.dataset.v; oweFormOpen = false; window.scrollTo(0, 0); render(); },
   saleMic: () => bzListen("sale", bzSaleVoice),
   addProd: (el) => { const p = bizData().products.find((x) => x.id === el.dataset.id); if (p) { bzCartAdd({ productId: p.id, name: p.name, qty: 1, unitPrice: p.price, unit: p.unit }); render(); buzz(20); } },
   npToggle: () => { npOpen = !npOpen; render(); },
@@ -2766,6 +2907,7 @@ const BZ = {
     const lt = el.parentNode.querySelector(".biz-line-total"); if (lt) lt.textContent = fmt(l.qty * l.unitPrice);
   },
   salePaid: (el) => { salePaid = el.dataset.v === "1"; render(); },
+  saleMethod: (el) => { saleMethod = el.dataset.v; render(); },
   saleCust: (el) => { saleCust = el.value; render(); },
   saleNewName: (el) => { saleNewName = el.value; }, saleNewPhone: (el) => { saleNewPhone = el.value; },
   saleRecord: () => bzRecordSale(),
@@ -2834,7 +2976,7 @@ function bzWire() {
         const j = JSON.parse(rd.result), d = j && j.data;
         if (!d || !Array.isArray(d.sales) || !Array.isArray(d.products) || !Array.isArray(d.creditors)) throw new Error("bad");
         if (!confirm("Replace the sales and I-owe data on this phone with this backup?")) return;
-        _biz = { products: d.products, sales: d.sales, creditors: d.creditors }; _bizKey = bizStoreKey(); bizSave(); bzMarkAll(); render(); flash("Backup restored");
+        _biz = { products: d.products, sales: d.sales, creditors: d.creditors, expenses: d.expenses || [], collects: d.collects || [], closes: d.closes || [] }; _bizKey = bizStoreKey(); bizSave(); bzMarkAll(); render(); flash("Backup restored");
       } catch (e) { flash("That file isn't a MyTab backup"); }
     };
     rd.readAsText(f);
@@ -2852,6 +2994,7 @@ const bzIK = () => "mytab_biz_init_" + (getBusinessId() || "local");
 function bzQ() { try { return JSON.parse(localStorage.getItem(bzQK())) || {}; } catch (e) { return {}; } }
 function bzQSave(q) { try { localStorage.setItem(bzQK(), JSON.stringify(q)); } catch (e) {} }
 function bzQueueLen() { return Object.keys(bzQ()).length; }
+const BZ_ARR = { expense: "expenses", collect: "collects", close: "closes" };
 function bzMark(kind, id, deleted) {
   const q = bzQ(); q[kind + ":" + id] = { kind, id, deleted: !!deleted }; bzQSave(q);
   updateSyncIndicator(); setTimeout(() => bzTick(true), 50);
@@ -2860,6 +3003,7 @@ function bzMarkAllQuiet() {
   const b = bizData(), q = bzQ();
   b.products.forEach((x) => { q["product:" + x.id] = { kind: "product", id: x.id, deleted: false }; });
   b.sales.forEach((x) => { q["sale:" + x.id] = { kind: "sale", id: x.id, deleted: false }; });
+  Object.keys(BZ_ARR).forEach((k) => b[BZ_ARR[k]].forEach((x) => { q[k + ":" + x.id] = { kind: k, id: x.id, deleted: false }; }));
   b.creditors.forEach((c) => {
     q["creditor:" + c.id] = { kind: "creditor", id: c.id, deleted: false };
     c.entries.forEach((e) => { q["oweentry:" + e.id] = { kind: "oweentry", id: e.id, deleted: false }; });
@@ -2871,14 +3015,15 @@ function bzDocFor(m) {
   const b = bizData();
   if (m.deleted) return { id: m.id, kind: m.kind, data: {}, deleted: true };
   if (m.kind === "product") { const x = b.products.find((p) => p.id === m.id); return x ? { id: x.id, kind: "product", data: { name: x.name, unit: x.unit, price: x.price } } : null; }
-  if (m.kind === "sale") { const x = b.sales.find((p) => p.id === m.id); return x ? { id: x.id, kind: "sale", data: { ts: x.ts, date: x.date, items: x.items, total: x.total, paid: x.paid, customerId: x.customerId, customerName: x.customerName } } : null; }
+  if (m.kind === "sale") { const x = b.sales.find((p) => p.id === m.id); return x ? { id: x.id, kind: "sale", data: { ts: x.ts, date: x.date, items: x.items, total: x.total, paid: x.paid, method: x.method || "", by: x.by || "", customerId: x.customerId, customerName: x.customerName } } : null; }
+  if (BZ_ARR[m.kind]) { const x = b[BZ_ARR[m.kind]].find((p) => p.id === m.id); if (!x) return null; const data = Object.assign({}, x); delete data.id; return { id: x.id, kind: m.kind, data }; }
   if (m.kind === "creditor") { const x = b.creditors.find((p) => p.id === m.id); return x ? { id: x.id, kind: "creditor", data: { name: x.name, phone: x.phone } } : null; }
   if (m.kind === "oweentry") {
     for (const c of b.creditors) { const e = c.entries.find((p) => p.id === m.id); if (e) return { id: e.id, kind: "oweentry", data: { creditorId: c.id, kind: e.kind, amount: e.amount, item: e.item, date: e.date } }; }
   }
   return null;
 }
-const BZ_RANK = { creditor: 0, product: 1, oweentry: 2, sale: 3 };
+const BZ_RANK = { creditor: 0, product: 1, oweentry: 2, sale: 3, expense: 4, collect: 4, close: 5 };
 let bzBusy = false, bzLastRev = null, bzSyncMissing = false, bzRenderTimer = null;
 
 async function bzFlush() {
@@ -2887,12 +3032,19 @@ async function bzFlush() {
   const items = Object.values(bzQ()).sort((a, c) => BZ_RANK[a.kind] - BZ_RANK[c.kind]);
   while (items.length) {
     const chunk = items.splice(0, 200), docs = chunk.map(bzDocFor).filter(Boolean);
-    if (docs.length) {
-      const r = await apiFetch("/api/sync/docs", { method: "POST", body: JSON.stringify({ docs }) });
-      if (!r.ok) { if (r.status === 404) bzSyncMissing = true; return false; }
+    // sales etc. always go first and on their own, so a server that does not know the newer record kinds yet can never block them
+    let held = false;
+    for (const part of [docs.filter((d) => !BZ_ARR[d.kind]), docs.filter((d) => BZ_ARR[d.kind])]) {
+      if (!part.length) continue;
+      const r = await apiFetch("/api/sync/docs", { method: "POST", body: JSON.stringify({ docs: part }) });
+      if (!r.ok) {
+        if (r.status === 404) bzSyncMissing = true;
+        if (r.status === 400 && BZ_ARR[part[0].kind]) { held = true; continue; }
+        return false;
+      }
     }
     const cur = bzQ();
-    chunk.forEach((m) => { if (JSON.stringify(cur[m.kind + ":" + m.id]) === JSON.stringify(m)) delete cur[m.kind + ":" + m.id]; });
+    chunk.forEach((m) => { if (held && BZ_ARR[m.kind]) return; if (JSON.stringify(cur[m.kind + ":" + m.id]) === JSON.stringify(m)) delete cur[m.kind + ":" + m.id]; });
     bzQSave(cur);
   }
   updateSyncIndicator();
@@ -2925,6 +3077,10 @@ async function bzPull() {
           if (i >= 0) { if (JSON.stringify(b.sales[i]) !== JSON.stringify(ns)) { b.sales[i] = ns; changed = true; } }
           else { b.sales.push(ns); changed = true; }
         }
+      } else if (BZ_ARR[d.kind]) {
+        const arr = b[BZ_ARR[d.kind]], i = arr.findIndex((p) => p.id === d.id);
+        if (d.deleted) { if (i >= 0) { arr.splice(i, 1); changed = true; } }
+        else { const nv = Object.assign({ id: d.id }, x); if (i >= 0) { if (JSON.stringify(arr[i]) !== JSON.stringify(nv)) { arr[i] = nv; changed = true; } } else { arr.push(nv); changed = true; } }
       } else if (d.kind === "creditor") {
         const i = b.creditors.findIndex((p) => p.id === d.id);
         if (d.deleted) { if (i >= 0) { b.creditors.splice(i, 1); changed = true; } }
@@ -3349,6 +3505,206 @@ async function bzVerifyPay() {
     flash("Still waiting for your bank. Pro turns on by itself when the payment arrives.");
   } finally { bzVerifying = false; }
 }
+
+/* =====================================================================
+   SHOP CLOSE: the nightly "does it add up?" screen, sealed days, Shop Record
+   (maths lives in close.js; this file is the screen and its buttons)
+   ===================================================================== */
+let clForm = { opening: "", counted: "", bank: "", keep: "" }, clFormDate = "", clSpent = { cat: "Fuel", amount: "", method: "cash" }, clJustClosed = false;
+const CL_CATS = ["Fuel", "Transport", "Stock", "Supplier", "Wages", "Other"];
+
+const clData = () => { const b = bizData(); return { sales: b.sales, expenses: b.expenses, collects: b.collects }; };
+const clCloseOf = (date) => bizData().closes.find((c) => c.date === date);
+const clPrevKeep = (date) => { const p = bizData().closes.filter((c) => c.date < date).sort((a, c) => (a.date < c.date ? 1 : -1))[0]; return p ? p.keep : 0; };
+const clOpening = () => (clForm.opening !== "" ? Number(clForm.opening) : clPrevKeep(bzISO()));
+const clPlain = (d) => { const p = d.split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString("en-NG", { weekday: "short", day: "numeric", month: "short" }); };
+const clStreakNow = () => clStreak(bizData().closes, bzISO(), bzAddDays);
+function clInit() {
+  const today = bzISO(); if (clFormDate === today) return; clFormDate = today; clJustClosed = false;
+  const c = clCloseOf(today);
+  clForm = c ? { opening: String(c.opening), counted: String(c.counted), bank: c.bank === null ? "" : String(c.bank), keep: String(c.keep) } : { opening: "", counted: "", bank: "", keep: "" };
+}
+function clLogCollect(d, amount) {
+  if (!(amount > 0)) return;
+  const b = bizData(), id = crypto.randomUUID();
+  b.collects.push({ id, date: bzISO(), ts: Date.now(), customerId: d.id, customerName: d.name, amount, method: "cash" });
+  bizSave(); bzMark("collect", id);
+}
+function clExpectedNow() { return clExpected(clDay(bzISO(), clData()), clOpening()).cash; }
+function clShowExpected() { const el = document.getElementById("clExp"); if (el) el.textContent = fmt(clExpectedNow()); }
+function clNeedsClose() {
+  if (bzIsStaff()) return false;
+  const today = bzISO(); if (clCloseOf(today)) return false;
+  return new Date().getHours() >= 16 && clDay(today, clData()).sales > 0;
+}
+function clPill() {
+  if (!clNeedsClose()) return "";
+  const n = clStreakNow();
+  return `<button class="cl-pill" data-b="goClose">🔒 Close today · 60 seconds${n > 0 ? " · " + n + " night" + (n === 1 ? "" : "s") + " in a row" : ""}</button>`;
+}
+
+/* ---- the change log kept on the server (cannot be erased from the app) ---- */
+let clAudit = null, clAuditAt = 0;
+async function clLoadAudit() {
+  if (Date.now() - clAuditAt < 15000 || !getToken() || !navigator.onLine) return;
+  clAuditAt = Date.now();
+  const r = await apiFetch("/api/sync/audit", { method: "GET" });
+  if (r.ok && JSON.stringify(r.data.entries) !== JSON.stringify(clAudit)) { clAudit = r.data.entries; if (view === "close") bzRenderSoon(); }
+}
+function clAuditText(e) {
+  const b = e.before || {}, a = e.after || {}, who = e.actor && e.actor.startsWith("staff:") ? " by " + e.actor.slice(6) : "";
+  const what = { sale: "Sale", expense: "Spending", collect: "Customer payment" }[e.kind] || "Record";
+  const amt = (x) => fmt(x.total !== undefined ? x.total : x.amount || 0);
+  if (e.kind === "close") return "Closing was redone: counted " + fmt(b.counted || 0) + " before, " + fmt(a.counted || 0) + " now";
+  if (e.action === "deleted") return what + " of " + amt(b) + " was deleted" + who;
+  if (e.action === "added") return what + " of " + amt(a) + " was added" + who;
+  return what + " changed from " + amt(b) + " to " + amt(a) + who;
+}
+function clAuditCard() {
+  if (!clAudit || !clAudit.length) return "";
+  return `<div class="quickadd-label" style="margin-top:16px;">Change log</div>
+    <div class="biz-card cl-card"><div class="biz-dim" style="margin-bottom:6px;">What was changed after a night was closed. MyTab keeps this and it cannot be erased.</div>
+    ${clAudit.slice(0, 15).map((e) => `<div class="cl-h" style="display:block;"><b>${clPlain(e.date || bzISO())}</b> · ${esc(clAuditText(e))}<div class="biz-dim">${new Date(e.at).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</div></div>`).join("")}</div>`;
+}
+
+function clVerdictCard(c) {
+  const v = clVerdict(c.gap), g = Math.abs(c.gap), recent = clRecentShort(bizData().closes, 3);
+  const title = v === "balanced" ? "Balanced ✓" : v === "short" ? "Short by " + fmt(g) : "Over by " + fmt(g);
+  const line = v === "balanced" ? "Your drawer matches what you sold."
+    : v === "short" ? "Your drawer has " + fmt(g) + " less than your sales say."
+    : "Your drawer has " + fmt(g) + " more than your sales say.";
+  const tip = v === "short" ? "Check: change given, a sale not recorded, or money you spent that is not in Spent."
+    : v === "over" ? "Check: a sale or a customer payment that was not recorded." : "";
+  const pat = v === "short" && recent.checked >= 3 && recent.short >= 2 ? `<div class="cl-pattern">Short on ${recent.short} of the last ${recent.checked} nights. Worth a closer look.</div>` : "";
+  let bank = "";
+  if (c.bankGap !== null) {
+    const bg = clVerdict(c.bankGap);
+    bank = `<div class="cl-bankline">Transfers: ${bg === "balanced" ? "match your records ✓" : "your bank app shows " + fmt(Math.abs(c.bankGap)) + (c.bankGap < 0 ? " less" : " more") + " than your records"}</div>`;
+  }
+  return `<div class="cl-verdict cl-verdict--${v}">
+    <div class="cl-vtitle">${title}</div><div class="cl-vline">${line}</div>
+    ${tip ? `<div class="cl-tip">${tip}</div>` : ""}${pat}${bank}
+    <div class="cl-sealed">🔒 Sealed ${bzTime(c.ts)}. Changes after this are flagged.</div>
+  </div>`;
+}
+
+function renderClose() {
+  if (bzIsStaff()) { view = "home"; return renderHome(); }
+  clInit(); clLoadAudit();
+  const b = bizData(), today = bzISO(), day = clDay(today, clData()), done = clCloseOf(today);
+  const n = clStreakNow();
+  const row = (l, v, cls) => `<div class="cl-row${cls ? " " + cls : ""}"><span>${l}</span><b>${v}</b></div>`;
+  const spent = b.expenses.filter((e) => e.date === today).sort((a, c) => c.ts - a.ts);
+  const colls = b.collects.filter((e) => e.date === today).sort((a, c) => c.ts - a.ts);
+  const people = Object.keys(day.byPerson);
+  const alerts = [...b.closes].sort((a, c) => (a.date < c.date ? 1 : -1)).slice(0, 7).map((c) => ({ c, ch: clChanges(c, clData(), fmt) })).filter((x) => x.ch.length);
+  const hist = [...b.closes].sort((a, c) => (a.date < c.date ? 1 : -1)).slice(0, bizPro() ? 90 : 14).map((c) => {
+    const v = clVerdict(c.gap), ch = clChanges(c, clData(), fmt);
+    return `<div class="cl-h"><div><b>${clPlain(c.date)}</b>${ch.length ? ` <span class="cl-flag">changed after close</span>` : ""}</div>
+      <span class="cl-hv cl-hv--${v}">${v === "balanced" ? "Balanced" : (v === "short" ? "Short " : "Over ") + fmt(Math.abs(c.gap))}</span></div>`;
+  }).join("");
+  return `<div class="screen">
+    <div class="hero">
+      ${bzHeroTop()}
+      <div class="hero-label">Close the shop · ${clPlain(today)}</div>
+      <div class="hero-amount">${fmt(day.salesTotal)} <span style="font-size:13px;font-weight:600;opacity:.8;">sold today</span></div>
+      <div class="biz-owehint">${n > 0 ? "🔥 " + n + " night" + (n === 1 ? "" : "s") + " closed in a row" : "Close tonight to start your streak"}</div>
+    </div>
+    <div class="biz-body">
+      ${alerts.length ? `<div class="cl-alert"><b>Changed after closing</b>${alerts.slice(0, 3).map((x) => `<div><u>${clPlain(x.c.date)}</u>: ${esc(x.ch.join(" "))}</div>`).join("")}</div>` : ""}
+      ${done && clJustClosed ? clVerdictCard(done) : ""}
+
+      <div class="quickadd-label">What came in today</div>
+      <div class="biz-card cl-card">
+        ${row("Cash sales", fmt(day.cashSales))}
+        ${row("Transfers", fmt(day.transferSales))}
+        ${row("On credit <span class=\"biz-dim\">(not in your drawer)</span>", fmt(day.creditSales))}
+        ${row("Customers paid back", fmt(day.collected))}
+        ${colls.map((c) => `<div class="cl-sub"><span>${esc(c.customerName || "Customer")} · ${fmt(c.amount)}</span>
+          <span class="cl-seg"><button class="${c.method !== "transfer" ? "on" : ""}" data-b="clColM" data-id="${esc(c.id)}" data-v="cash">Cash</button><button class="${c.method === "transfer" ? "on" : ""}" data-b="clColM" data-id="${esc(c.id)}" data-v="transfer">Transfer</button></span></div>`).join("")}
+        ${people.length > 1 || (people.length === 1 && people[0] !== "") ? `<div class="cl-people">${people.map((p) => `<span>${esc(p || "You")}: ${fmt(day.byPerson[p].total)} (${day.byPerson[p].count})</span>`).join("")}</div>` : ""}
+      </div>
+
+      <div class="quickadd-label" style="margin-top:16px;">Money you spent today</div>
+      <div class="biz-card cl-card">
+        ${spent.map((e) => `<div class="cl-sub"><span>${esc(e.category)} · <b>${fmt(e.amount)}</b> <span class="biz-dim">${e.method === "transfer" ? "transfer" : "cash"}</span></span><button class="biz-x" data-b="clExpDel" data-id="${esc(e.id)}" aria-label="Delete">${icon.trashSm}</button></div>`).join("")}
+        <div class="cl-cats">${CL_CATS.map((c) => `<button class="chip${clSpent.cat === c ? " chip--active" : ""}" data-b="clCat" data-v="${c}">${c}</button>`).join("")}</div>
+        <div class="cl-addrow">
+          <input data-b="clSpAmt" data-ev="input" type="tel" inputmode="numeric" placeholder="Amount ₦" value="${esc(clSpent.amount)}" aria-label="Amount spent" />
+          <span class="cl-seg"><button class="${clSpent.method !== "transfer" ? "on" : ""}" data-b="clSpM" data-v="cash">Cash</button><button class="${clSpent.method === "transfer" ? "on" : ""}" data-b="clSpM" data-v="transfer">Transfer</button></span>
+          <button class="settle-btn" data-b="clSpAdd" style="flex:none;">Add</button>
+        </div>
+        <div class="biz-dim" style="margin-top:6px;">Paid a supplier or bought stock with cash? Add it here, or your drawer will look short.</div>
+      </div>
+
+      <div class="quickadd-label" style="margin-top:16px;">Count your money</div>
+      <div class="biz-card cl-card">
+        <label class="cl-f">Cash you started the day with<input data-b="clOpen" data-ev="input" type="tel" inputmode="numeric" placeholder="${clPrevKeep(today)}" value="${esc(clForm.opening)}" /></label>
+        <div class="cl-expect">MyTab expects <b id="clExp">${fmt(clExpectedNow())}</b> in your drawer</div>
+        <label class="cl-f">Cash you counted now<input data-b="clCount" data-ev="input" type="tel" inputmode="numeric" placeholder="Count the drawer" value="${esc(clForm.counted)}" /></label>
+        <label class="cl-f">Transfers your bank app shows today <span class="optional">(optional, expected ${fmt(day.transferIn)})</span><input data-b="clBank" data-ev="input" type="tel" inputmode="numeric" placeholder="${day.transferIn}" value="${esc(clForm.bank)}" /></label>
+        <label class="cl-f">Cash you are leaving for tomorrow <span class="optional">(optional)</span><input data-b="clKeep" data-ev="input" type="tel" inputmode="numeric" placeholder="same as counted" value="${esc(clForm.keep)}" /></label>
+        <button class="primary-btn" data-b="clClose" style="margin:12px 0 0;width:100%;">${done ? "Close again" : "Close the shop"}</button>
+        ${done && !clJustClosed ? `<div class="biz-dim" style="margin-top:8px;">Already closed at ${bzTime(done.ts)}: ${clVerdict(done.gap) === "balanced" ? "balanced" : (done.gap < 0 ? "short " : "over ") + fmt(Math.abs(done.gap))}. Closing again replaces it.</div>` : ""}
+      </div>
+
+      ${hist ? `<div class="quickadd-label" style="margin-top:16px;">Past nights</div><div class="biz-card cl-card">${hist}</div>` : ""}
+      ${clAuditCard()}
+      ${clRecordCard()}
+    </div>
+  </div>`;
+}
+
+/* ---- the monthly Shop Record ---- */
+function clRecord() {
+  const t = bzISO(), month = t.slice(0, 7), owed = debtors.reduce((a, d) => a + balanceOf(d), 0);
+  return clMonth(month, clData(), bizData().closes, owed, Number(t.slice(8)));
+}
+function clRecordText() {
+  const r = clRecord(), t = bzISO(), name = (getBusinessMeta().name || "My shop");
+  const mon = new Date(t + "T12:00:00").toLocaleDateString("en-NG", { month: "long", year: "numeric" });
+  return `MyTab Shop Record: ${name}\n${mon}, up to ${clPlain(t)}\n\nSales: ${fmt(r.sales)}\nCustomer payments received: ${fmt(r.collected)}\nMoney spent: ${fmt(r.spent)}\nNights closed: ${r.closed} of ${r.days} (${r.balanced} balanced${r.short ? ", " + r.short + " short by " + fmt(r.shortTotal) + " in total" : ""})\nCustomers owe the shop now: ${fmt(r.owed)}\n\nRecorded night by night in MyTab. This is the shop's own record, not a bank statement.`;
+}
+function clRecordCard() {
+  const r = clRecord();
+  if (!bizPro()) return `<div class="biz-card cl-card" style="margin-top:16px;"><div class="biz-h">Shop Record</div>
+    <div class="biz-dim" style="margin-bottom:10px;">A monthly statement of your sales, spending and closed nights. Show it to a supplier, a landlord or a lender.</div>
+    <button class="settle-btn" data-b="goPro" style="width:100%;">Unlock with Pro</button></div>`;
+  return `<div class="biz-card cl-card" style="margin-top:16px;"><div class="biz-h">Shop Record · this month</div>
+    <div class="cl-row"><span>Sales</span><b>${fmt(r.sales)}</b></div>
+    <div class="cl-row"><span>Customer payments received</span><b>${fmt(r.collected)}</b></div>
+    <div class="cl-row"><span>Money spent</span><b>${fmt(r.spent)}</b></div>
+    <div class="cl-row"><span>Nights closed</span><b>${r.closed} of ${r.days}</b></div>
+    <div class="cl-row"><span>Balanced / short</span><b>${r.balanced} / ${r.short}</b></div>
+    <button class="settle-btn" data-b="clShare" style="width:100%;margin-top:10px;">Send on WhatsApp</button></div>`;
+}
+
+Object.assign(BZ, {
+  goClose: () => { clJustClosed = false; view = "close"; window.scrollTo(0, 0); render(); },
+  clCat: (el) => { clSpent.cat = el.dataset.v; render(); },
+  clSpM: (el) => { clSpent.method = el.dataset.v; render(); },
+  clSpAmt: (el) => { clSpent.amount = el.value.replace(/\D/g, ""); },
+  clSpAdd: () => {
+    const amt = Number(clSpent.amount); if (!(amt > 0)) { flash("Type how much you spent"); return; }
+    const b = bizData(), id = crypto.randomUUID();
+    b.expenses.push({ id, date: bzISO(), ts: Date.now(), category: clSpent.cat, amount: amt, method: clSpent.method });
+    bizSave(); bzMark("expense", id); clSpent.amount = ""; render(); buzz(); flash("Added");
+  },
+  clExpDel: (el) => { const b = bizData(); b.expenses = b.expenses.filter((e) => e.id !== el.dataset.id); bizSave(); bzMark("expense", el.dataset.id, true); render(); },
+  clColM: (el) => { const c = bizData().collects.find((x) => x.id === el.dataset.id); if (c) { c.method = el.dataset.v; bizSave(); bzMark("collect", c.id); render(); } },
+  clOpen: (el) => { clForm.opening = el.value.replace(/\D/g, ""); clShowExpected(); },
+  clCount: (el) => { clForm.counted = el.value.replace(/\D/g, ""); },
+  clBank: (el) => { clForm.bank = el.value.replace(/\D/g, ""); },
+  clKeep: (el) => { clForm.keep = el.value.replace(/\D/g, ""); },
+  clClose: () => {
+    if (clForm.counted === "") { flash("Count your drawer and type the amount"); return; }
+    const b = bizData(), today = bzISO(), old = clCloseOf(today);
+    const c = clBuild(today, clData(), { opening: clOpening(), counted: clForm.counted, keep: clForm.keep, bank: clForm.bank }, old ? old.id : crypto.randomUUID(), Date.now());
+    b.closes = b.closes.filter((x) => x.date !== today); b.closes.push(c);
+    bizSave(); bzMark("close", c.id); clJustClosed = true; render(); window.scrollTo(0, 0); buzz();
+  },
+  clShare: () => { window.open("https://wa.me/?text=" + encodeURIComponent(clRecordText()), "_blank"); },
+});
 
     render();
     refreshFromServerIfIdle();
