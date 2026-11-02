@@ -1,11 +1,11 @@
 {
   "name": "MyTab",
   "short_name": "MyTab",
-  "description": "Track who owes you, offline-friendly, built for a busy market.",
+  "description": "Close your shop knowing where you stand: who owes you, what came in, what went out.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
-  "background_color": "#FFFFFF",
+  "background_color": "#1B2466",
   "theme_color": "#1B2466",
   "icons": [
     {
@@ -25,6 +25,53 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "id": "/app/",
+  "lang": "en-NG",
+  "orientation": "portrait",
+  "categories": [
+    "business",
+    "finance",
+    "productivity"
+  ],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "shortcuts": [
+    {
+      "name": "Record a sale",
+      "short_name": "Sale",
+      "url": "./?go=sales",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Close the shop",
+      "short_name": "Close",
+      "url": "./?go=close",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Who owes me",
+      "short_name": "Owe me",
+      "url": "./?go=home",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
