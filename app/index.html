@@ -563,6 +563,19 @@ body::before { content:""; position:fixed; top:0; left:0; right:0; height:env(sa
 #phone:not(.big) .biz-card, #phone:not(.big) .biz-stat { padding-top:12px; padding-bottom:12px; }
 #phone:not(.big) .biz-nav-btn { font-size:10.5px; padding:7px 2px 6px; }
 .screen .list { padding-bottom:64px; }
+
+/* ---- profit, costs, morning line ---- */
+.cl-costs { padding:0; margin-top:14px; overflow:hidden; }
+.cl-costs-h { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; text-align:left; background:none; border:0; padding:13px 16px; font:inherit; color:var(--ink); cursor:pointer; }
+.cl-costs-h > span:first-child { display:flex; flex-direction:column; gap:2px; font-size:14px; }
+.cl-chev { font-size:22px; color:var(--ink-soft); transition:transform .25s ease; } .cl-chev.open { transform:rotate(90deg); }
+.cl-costrow { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 16px; border-top:1px solid var(--line); font-size:14px; }
+.cl-costrow input { width:120px; flex:none; text-align:right; padding:9px 12px; border-radius:12px; }
+.cl-profit .cl-big { font-weight:800; font-size:26px; letter-spacing:-.02em; margin-bottom:4px; }
+.cl-profit--ask { padding:0; margin-top:14px; }
+.cl-link { width:100%; background:none; border:0; text-align:left; padding:14px 16px; font:inherit; font-weight:700; font-size:14px; color:var(--indigo); cursor:pointer; }
+.cl-morning { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; margin:12px 20px 0; padding:11px 14px; border-radius:16px; font-size:13.5px; background:linear-gradient(160deg,#FFF9E8,#FDF1CF); border:1px solid rgba(201,154,59,.35); color:#6B4A07; }
+.cl-m-ok { color:var(--green); font-weight:700; } .cl-m-bad { color:var(--red); font-weight:700; } .cl-m-n { color:#8F6208; font-weight:700; }
 </style>
 </head>
 <body>
@@ -1346,7 +1359,7 @@ document.addEventListener("visibilitychange", () => {
             <button class="iconbtn" id="settingsBtn" style="position:absolute; top:20px; right:${isStandalone() ? "64" : "110"}px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.settings}</button>
           </div>
           ${birthdayBanner}
-          ${overdueBanner}
+          ${overdueBanner}${clMorningCard()}
           ${upgradeBanner}
           <div class="tabs">
             <button class="tab${tab === "today" ? " tab--active" : ""}" data-tab="today">Today</button>
@@ -2623,6 +2636,23 @@ function clMonth(month, data, closes, owed, daysInMonthSoFar) {
   return rec;
 }
 
+/* Profit. Only items whose cost you entered count, so we never guess. Stock spending is left out of running costs
+   because the cost of the goods is already taken off each sale (counting both would count the same money twice). */
+const CL_STOCK_CATS = ["Stock", "Supplier"];
+function clProfit(data, dates) {
+  const set = new Set(dates);
+  const r = { covered: 0, uncovered: 0, cost: 0, gross: 0, running: 0, net: 0, known: false, share: 0 };
+  (data.sales || []).filter((s) => set.has(s.date)).forEach((s) => (s.items || []).forEach((it) => {
+    const rev = (Number(it.qty) || 0) * (Number(it.unitPrice) || 0), uc = Number(it.unitCost);
+    if (uc > 0) { r.covered += rev; r.cost += (Number(it.qty) || 0) * uc; } else r.uncovered += rev;
+  }));
+  (data.expenses || []).filter((e) => set.has(e.date) && CL_STOCK_CATS.indexOf(e.category) < 0).forEach((e) => { r.running += Number(e.amount) || 0; });
+  r.gross = r.covered - r.cost; r.net = r.gross - r.running;
+  r.known = r.covered > 0;
+  r.share = r.covered + r.uncovered > 0 ? Math.round((100 * r.covered) / (r.covered + r.uncovered)) : 0;
+  return r;
+}
+
 /* =====================================================================
    BETA: Sales tracker, "I owe", Summary  (data lives on this phone first)
    ===================================================================== */
@@ -2812,7 +2842,7 @@ function bzRecordSale() {
       else { const p = { id: crypto.randomUUID(), name: l.name, unit: l.unit || "pack", price: Number(l.unitPrice) }; b.products.push(p); l.productId = p.id; bzMark("product", p.id); }
     }
   });
-  const items = saleCart.map((l) => ({ productId: l.productId, name: l.name, qty: Number(l.qty), unitPrice: Number(l.unitPrice) }));
+  const items = saleCart.map((l) => { const pr = b.products.find((p) => p.id === l.productId), it = { productId: l.productId, name: l.name, qty: Number(l.qty), unitPrice: Number(l.unitPrice) }; if (pr && pr.cost > 0) it.unitCost = pr.cost; return it; });
   const total = items.reduce((a, i) => a + i.qty * i.unitPrice, 0);
   const now = new Date();
   const sale = { id: crypto.randomUUID(), ts: now.getTime(), date: bzISO(now), items, total, paid: salePaid, method: salePaid ? saleMethod : "", customerId: custId, customerName: custName, by: bzIsStaff() ? (bzGet("mytab_staff_name") || "") : "" };
@@ -2875,11 +2905,13 @@ function renderSales() {
           <label>Product name<input data-b="npName" data-ev="input" placeholder="e.g. Pure water" value="${esc(npName)}" /></label>
           <div style="display:flex;gap:10px;">
             <label style="flex:1;">Price (₦)<input data-b="npPrice" data-ev="input" type="tel" inputmode="numeric" placeholder="700" value="${esc(npPrice)}" /></label>
+            <label style="flex:1;">Costs you (₦) <span class="biz-dim">optional</span><input data-b="npCost" data-ev="input" type="tel" inputmode="numeric" placeholder="500" value="${esc(npCost)}" /></label>
             <label style="flex:1;">Sold by<select data-b="npUnit" data-ev="change">${["pack", "piece", "bottle", "bag", "crate", "carton", "plate", "kg", "dozen"].map((u) => `<option${npUnit === u ? " selected" : ""}>${u}</option>`).join("")}</select></label>
           </div>
           <button class="settle-btn" data-b="npSave">Save product</button>
         </div></div>` : ""}
 
+      ${b.products.length ? bzCostsCard(b) : ""}
       <div class="quickadd-label" style="margin-top:18px;">This sale</div>
       ${saleCart.length ? cart : `<div class="biz-eg" style="text-align:left;">Tap a product above to start a sale.</div>`}
 
@@ -3053,6 +3085,13 @@ function bzProCharts() {
     </div>
     <button class="ghost-btn" data-b="salesCsv" style="width:100%;justify-content:center;margin-top:12px;">Download sales as spreadsheet (CSV)</button>`;
 }
+function bzProfitCard(dates, label) {
+  const p = clProfit(bizData(), dates);
+  if (!p.known) return "";
+  return `<div class="biz-card" style="margin-top:12px;"><div class="biz-dim">Profit, ${label}</div>
+    <div style="font-weight:800;font-size:20px;color:${p.net >= 0 ? "var(--green)" : "var(--red)"};">${p.net >= 0 ? "" : "−"}${fmt(Math.abs(p.net))}</div>
+    <div class="biz-dim" style="margin-top:6px;">${fmt(p.gross)} made on what you sold, less ${fmt(p.running)} spent running the shop.${p.share < 100 ? " Counts " + p.share + "% of your sales, so add the cost of your other items." : ""}</div></div>`;
+}
 function renderSummary() {
   const today = bzISO(), yest = bzAddDays(today, -1), wk = bzRange(7);
   const t = bzTotal([today]), y = bzTotal([yest]), w = bzTotal(wk);
@@ -3079,6 +3118,7 @@ function renderSummary() {
         <div style="font-weight:800;font-size:18px;color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net >= 0 ? "" : "−"}${fmt(Math.abs(net))} ${net >= 0 ? "ahead" : "behind"}</div>
         ${top ? `<div class="biz-dim" style="margin-top:8px;">Top seller today: <b style="color:var(--ink)">${esc(top.name)}</b> (${top.qty})</div>` : ""}
       </div>
+      ${bzProfitCard(wk, "last 7 days")}
       ${bizPro() ? bzProCharts() : bzLockedSample()}
       ${!isPro() && BZ_BETA ? `<button class="biz-preview" data-b="togglePreview">${bizPro() ? "Beta: turn off Pro preview" : "Beta: preview the Pro charts"}</button>` : ""}
     </div>
@@ -3122,14 +3162,21 @@ const BZ = {
   nav: (el) => { clJustClosed = false; if (bzIsStaff() && !["home", "sales"].includes(el.dataset.v)) return; view = el.dataset.v; oweFormOpen = false; window.scrollTo(0, 0); render(); },
   saleMic: () => bzListen("sale", bzSaleVoice),
   addProd: (el) => { const p = bizData().products.find((x) => x.id === el.dataset.id); if (p) { bzCartAdd({ productId: p.id, name: p.name, qty: 1, unitPrice: p.price, unit: p.unit }); render(); buzz(20); } },
+  costToggle: () => { costOpen = !costOpen; render(); },
+  prodCost: (el) => {
+    const p = bizData().products.find((x) => x.id === el.dataset.id); if (!p) return;
+    const v = Number(el.value.replace(/\D/g, "")) || 0;
+    if (v > 0) p.cost = v; else delete p.cost;
+    bizSave(); bzMark("product", p.id); flash(v > 0 ? p.name + " cost saved" : "Cost cleared");
+  },
   npToggle: () => { npOpen = !npOpen; render(); },
-  npName: (el) => { npName = el.value; }, npPrice: (el) => { npPrice = el.value.replace(/\D/g, ""); }, npUnit: (el) => { npUnit = el.value; },
+  npCost: (el) => { npCost = el.value.replace(/\D/g, ""); }, npName: (el) => { npName = el.value; }, npPrice: (el) => { npPrice = el.value.replace(/\D/g, ""); }, npUnit: (el) => { npUnit = el.value; },
   npSave: () => {
     const b = bizData(), name = npName.trim(), price = Number(npPrice);
     if (!name || !(price > 0)) { flash("Add a name and a price"); return; }
     if (b.products.some((p) => p.name.toLowerCase() === name.toLowerCase())) { flash("You already have " + name); return; }
-    const np = { id: crypto.randomUUID(), name, unit: npUnit, price }; b.products.push(np); bizSave(); bzMark("product", np.id);
-    npOpen = false; npName = ""; npPrice = ""; render(); flash(name + " added");
+    const np = { id: crypto.randomUUID(), name, unit: npUnit, price }; if (Number(npCost) > 0) np.cost = Number(npCost); b.products.push(np); bizSave(); bzMark("product", np.id);
+    npOpen = false; npName = ""; npPrice = ""; npCost = ""; render(); flash(name + " added");
   },
   cartPlus: (el) => { const l = bzFind(el.dataset.key); if (l) { l.qty += 1; render(); } },
   cartMinus: (el) => { const l = bzFind(el.dataset.key); if (l) { l.qty = Math.max(1, l.qty - 1); render(); } },
@@ -3249,7 +3296,7 @@ function bzMarkAll() { bzMarkAllQuiet(); setTimeout(() => bzTick(true), 50); }
 function bzDocFor(m) {
   const b = bizData();
   if (m.deleted) return { id: m.id, kind: m.kind, data: {}, deleted: true };
-  if (m.kind === "product") { const x = b.products.find((p) => p.id === m.id); return x ? { id: x.id, kind: "product", data: { name: x.name, unit: x.unit, price: x.price } } : null; }
+  if (m.kind === "product") { const x = b.products.find((p) => p.id === m.id); return x ? { id: x.id, kind: "product", data: Object.assign({ name: x.name, unit: x.unit, price: x.price }, x.cost > 0 ? { cost: x.cost } : {}) } : null; }
   if (m.kind === "sale") { const x = b.sales.find((p) => p.id === m.id); return x ? { id: x.id, kind: "sale", data: { ts: x.ts, date: x.date, items: x.items, total: x.total, paid: x.paid, method: x.method || "", by: x.by || "", customerId: x.customerId, customerName: x.customerName } } : null; }
   if (BZ_ARR[m.kind]) { const x = b[BZ_ARR[m.kind]].find((p) => p.id === m.id); if (!x) return null; const data = Object.assign({}, x); delete data.id; return { id: x.id, kind: m.kind, data }; }
   if (m.kind === "creditor") { const x = b.creditors.find((p) => p.id === m.id); return x ? { id: x.id, kind: "creditor", data: { name: x.name, phone: x.phone } } : null; }
@@ -3300,7 +3347,7 @@ async function bzPull() {
         const i = b.products.findIndex((p) => p.id === d.id);
         if (d.deleted) { if (i >= 0) { b.products.splice(i, 1); changed = true; } }
         else {
-          const np = { id: d.id, name: x.name, unit: x.unit, price: x.price };
+          const np = Object.assign({ id: d.id, name: x.name, unit: x.unit, price: x.price }, x.cost > 0 ? { cost: x.cost } : {});
           if (i >= 0) { if (JSON.stringify(b.products[i]) !== JSON.stringify(np)) { b.products[i] = np; changed = true; } }
           else { b.products.push(np); changed = true; }
         }
@@ -3395,6 +3442,13 @@ function bzAutoStart() {
 /* ---- friendliness: plan chip + settings gear on every tab, big text, first-time guide ---- */
 const bzGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const bzSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+let npCost = "", costOpen = false;
+function bzCostsCard(b) {
+  const n = b.products.filter((p) => p.cost > 0).length;
+  return `<div class="biz-card cl-costs"><button class="cl-costs-h" data-b="costToggle"><span><b>What things cost you</b><span class="biz-dim">${n === b.products.length ? "All set, profit shows in Close and Summary" : "Add costs to see your profit (" + n + " of " + b.products.length + " done)"}</span></span><span class="cl-chev${costOpen ? " open" : ""}">›</span></button>
+    ${costOpen ? b.products.map((p) => `<div class="cl-costrow"><span>${esc(p.name)} <span class="biz-dim">sells ${fmt(p.price)}</span></span><input data-b="prodCost" data-ev="change" data-id="${esc(p.id)}" type="tel" inputmode="numeric" placeholder="cost ₦" value="${p.cost > 0 ? p.cost : ""}" /></div>`).join("") : ""}
+  </div>`;
+}
 const bzBigOn = () => bzGet("mytab_big_text") === "1";
 function bzPlanChip() { if (bzIsStaff()) return ""; return `<button class="biz-plan${isPro() ? " biz-plan--pro" : ""}" data-b="goPlan">${isPro() ? "PRO ✓" : "FREE ›"}</button>`; }
 function bzHeroTop() {
@@ -3773,6 +3827,23 @@ function clNeedsClose() {
   const today = bzISO(); if (clCloseOf(today)) return false;
   return new Date().getHours() >= 16 && clDay(today, clData()).sales > 0;
 }
+function clProfitCard() {
+  const p = clProfit(bizData(), [bzISO()]);
+  if (!p.known) return bizData().sales.some((s) => s.date === bzISO()) ? `<div class="biz-card cl-card cl-profit cl-profit--ask"><button class="cl-link" data-b="goCosts">Add what your items cost to see today's profit ›</button></div>` : "";
+  return `<div class="quickadd-label" style="margin-top:16px;">Profit today</div><div class="biz-card cl-card cl-profit">
+    <div class="cl-big" style="color:${p.net >= 0 ? "var(--green)" : "var(--red)"};">${p.net >= 0 ? "" : "−"}${fmt(Math.abs(p.net))}</div>
+    <div class="biz-dim">${fmt(p.gross)} made on what you sold, less ${fmt(p.running)} spent running the shop${p.share < 100 ? ". Counts " + p.share + "% of today's sales; add costs for the rest" : ""}.</div></div>`;
+}
+/* Morning: one quiet line about yesterday, so opening the app feels like opening the shop's book. */
+function clMorningCard() {
+  if (bzIsStaff() || new Date().getHours() >= 12) return "";
+  const b = bizData(), y = bzAddDays(bzISO(), -1), day = clDay(y, b);
+  if (!day.sales) return "";
+  const cl = (b.closes || []).find((c) => c.date === y);
+  const v = cl ? clVerdict(cl.gap) : "";
+  const tail = !cl ? `<span class="cl-m-n">not closed</span>` : v === "balanced" ? `<span class="cl-m-ok">closed, balanced ✓</span>` : `<span class="cl-m-bad">closed, ${fmt(Math.abs(cl.gap))} ${cl.gap < 0 ? "short" : "over"}</span>`;
+  return `<div class="cl-morning"><span>☀️ Yesterday you sold <b>${fmt(day.salesTotal)}</b></span>${tail}</div>`;
+}
 function clPill() {
   if (!clNeedsClose()) return "";
   const n = clStreakNow();
@@ -3861,6 +3932,7 @@ function renderClose() {
         ${people.length > 1 || (people.length === 1 && people[0] !== "") ? `<div class="cl-people">${people.map((p) => `<span>${esc(p || "You")}: ${fmt(day.byPerson[p].total)} (${day.byPerson[p].count})</span>`).join("")}</div>` : ""}
       </div>
 
+      ${clProfitCard()}
       <div class="quickadd-label" style="margin-top:16px;">Money you spent today</div>
       <div class="biz-card cl-card">
         ${spent.map((e) => `<div class="cl-sub"><span>${esc(e.category)} · <b>${fmt(e.amount)}</b> <span class="biz-dim">${e.method === "transfer" ? "transfer" : "cash"}</span></span><button class="biz-x" data-b="clExpDel" data-id="${esc(e.id)}" aria-label="Delete">${icon.trashSm}</button></div>`).join("")}
@@ -3916,6 +3988,7 @@ function clRecordCard() {
 }
 
 Object.assign(BZ, {
+  goCosts: () => { costOpen = true; view = "sales"; window.scrollTo(0, 0); render(); },
   goClose: () => { clJustClosed = false; view = "close"; window.scrollTo(0, 0); render(); },
   clCat: (el) => { clSpent.cat = el.dataset.v; render(); },
   clSpM: (el) => { clSpent.method = el.dataset.v; render(); },
