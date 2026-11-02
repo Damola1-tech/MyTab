@@ -527,6 +527,42 @@ body::before { content:""; position:fixed; top:0; left:0; right:0; height:env(sa
 .hero .iconbtn, .hero button:not(.cl-pill):not(.primary-btn) { background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.26); color:#fff; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); box-shadow:inset 0 1px 0 rgba(255,255,255,.25); }
 .biz-card, .biz-stat, .balance-card { background:linear-gradient(160deg,#fff,#F6F7FD); border:1px solid rgba(255,255,255,.9); box-shadow:0 12px 28px -20px rgba(20,26,51,.45), 0 1px 2px rgba(20,26,51,.06), inset 0 1px 0 #fff; }
 .biz-guide-card { background:rgba(255,255,255,.78); -webkit-backdrop-filter:blur(18px) saturate(1.6); backdrop-filter:blur(18px) saturate(1.6); border:1px solid rgba(255,255,255,.8); box-shadow:0 20px 40px -20px rgba(20,26,51,.5); }
+
+/* ---- movement: sliding pill, screens easing in ---- */
+.biz-nav-ind { position:absolute; top:6px; bottom:6px; left:6px; width:calc((100% - 12px - (var(--n) - 1) * 2px) / var(--n)); border-radius:20px; z-index:0; pointer-events:none;
+  background:linear-gradient(160deg,#2B37A0,#1B2466 70%); box-shadow:0 10px 20px -10px rgba(27,36,102,.9), inset 0 1px 0 rgba(255,255,255,.22);
+  transform:translateX(calc(var(--to) * (100% + 2px))); }
+.biz-nav-ind.go { animation:bzslide .42s cubic-bezier(.3,1.25,.4,1) both; }
+@keyframes bzslide { from { transform:translateX(calc(var(--from) * (100% + 2px))); } to { transform:translateX(calc(var(--to) * (100% + 2px))); } }
+.biz-nav-btn { z-index:1; }
+.biz-nav-btn--on { background:none !important; box-shadow:none !important; }
+@keyframes scrIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+@keyframes rowIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+#phone.view-in .screen > :not(.hero):not(.biz-nav) { animation:scrIn .32s cubic-bezier(.2,.8,.2,1) both; }
+#phone.view-in .list .grow { animation:rowIn .36s cubic-bezier(.2,.8,.2,1) both; }
+#phone.view-in .list .grow:nth-child(2) { animation-delay:.04s; } #phone.view-in .list .grow:nth-child(3) { animation-delay:.08s; }
+#phone.view-in .list .grow:nth-child(4) { animation-delay:.12s; } #phone.view-in .list .grow:nth-child(n+5) { animation-delay:.16s; }
+.hero-amount { animation:none; }
+@media (prefers-reduced-motion:reduce) { .biz-nav-ind.go, #phone.view-in .screen > *, #phone.view-in .list .grow { animation:none !important; } }
+
+/* ---- compact type: everything useful fits on one screen (Big text mode in Settings keeps the large sizes) ---- */
+.fab { position:fixed; right:max(16px, calc(50% - 216px)); bottom:calc(92px + env(safe-area-inset-bottom,0px)); z-index:7; }
+#phone.has-nav .fab { bottom:calc(92px + env(safe-area-inset-bottom,0px)); }
+#phone:not(.big) .fab { height:48px; padding:0 18px 0 14px; font-size:14px; border-radius:24px; gap:6px; box-shadow:0 14px 26px -10px rgba(27,36,102,.75); }
+#phone:not(.big) .fab::after { font-size:14px; }
+#phone:not(.big) .fab svg { width:20px; height:20px; }
+#phone:not(.big) .hero { padding:14px 20px 20px; border-radius:0 0 26px 26px; }
+#phone:not(.big) .hero-amount { font-size:36px; }
+#phone:not(.big) .hero-label { font-size:13px; }
+#phone:not(.big) .tabs { margin:12px 20px 0; }
+#phone:not(.big) .tab { padding:8px 0; font-size:14px; }
+#phone:not(.big) .list .grow { padding:9px 0; min-height:58px; gap:12px; }
+#phone:not(.big) .grow-av { width:40px; height:40px; font-size:15px; }
+#phone:not(.big) .grow-name { font-size:15.5px; }
+#phone:not(.big) .list .grow .grow-amount { font-size:16px; }
+#phone:not(.big) .biz-card, #phone:not(.big) .biz-stat { padding-top:12px; padding-bottom:12px; }
+#phone:not(.big) .biz-nav-btn { font-size:10.5px; padding:7px 2px 6px; }
+.screen .list { padding-bottom:64px; }
 </style>
 </head>
 <body>
@@ -1161,6 +1197,7 @@ document.addEventListener("visibilitychange", () => {
       const showNav = stage === "app" && BZ_NAV_VIEWS.includes(view);
       root.classList.toggle("has-nav", showNav);
       root.classList.toggle("big", stage === "app" && bzBigOn());
+      bzViewMotion(root, showNav);
       if (showNav) root.innerHTML += bzNav() + bzGuide();
 
       if (stage === "app") root.innerHTML += `<button class="sync-btn" id="syncBtn" aria-label="Refresh"><span class="sync-dot" id="syncDot"></span><span class="sync-ico">↻</span></button>`;
@@ -2708,7 +2745,19 @@ function bzNav() {
   };
   const items = bzIsStaff() ? [["home", "Owe me"], ["sales", "Sales"]] : [["home", "Owe me"], ["sales", "Sales"], ["close", "Close"], ["owe", "I owe"], ["summary", "Summary"]];
   const cur = view === "oweDetail" ? "owe" : view;
-  return `<nav class="biz-nav">${items.map(([v, l]) => `<button class="biz-nav-btn${cur === v ? " biz-nav-btn--on" : ""}" data-b="nav" data-v="${v}">${ic[v]}<span>${l}</span></button>`).join("")}</nav>`;
+  const to = Math.max(0, items.findIndex(([v]) => v === cur));
+  const from = bzNavPrev === null || bzNavPrev >= items.length ? to : bzNavPrev;
+  bzNavPrev = to;
+  return `<nav class="biz-nav" style="--n:${items.length};--from:${from};--to:${to}"><span class="biz-nav-ind${from !== to ? " go" : ""}"></span>${items.map(([v, l]) => `<button class="biz-nav-btn${cur === v ? " biz-nav-btn--on" : ""}" data-b="nav" data-v="${v}">${ic[v]}<span>${l}</span></button>`).join("")}</nav>`;
+}
+let bzNavPrev = null, bzLastView = null;
+/* screens ease in when you change tab; ordinary re-renders (typing, saving) stay still */
+function bzViewMotion(root, showNav) {
+  if (bzLastView === view) return;
+  bzLastView = view;
+  if (!showNav) return;
+  root.classList.remove("view-in"); void root.offsetWidth; root.classList.add("view-in");
+  clearTimeout(bzViewMotion.t); bzViewMotion.t = setTimeout(() => root.classList.remove("view-in"), 700);
 }
 
 /* ---- customers (reuse the existing customer list = your customer database) ---- */
@@ -3346,7 +3395,7 @@ function bzAutoStart() {
 /* ---- friendliness: plan chip + settings gear on every tab, big text, first-time guide ---- */
 const bzGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const bzSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
-const bzBigOn = () => bzGet("mytab_big_text") !== "0";
+const bzBigOn = () => bzGet("mytab_big_text") === "1";
 function bzPlanChip() { if (bzIsStaff()) return ""; return `<button class="biz-plan${isPro() ? " biz-plan--pro" : ""}" data-b="goPlan">${isPro() ? "PRO ✓" : "FREE ›"}</button>`; }
 function bzHeroTop() {
   return `<div class="brand-name">MyTab ${bzPlanChip()}</div>
