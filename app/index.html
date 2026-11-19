@@ -576,6 +576,37 @@ body::before { content:""; position:fixed; top:0; left:0; right:0; height:env(sa
 .cl-link { width:100%; background:none; border:0; text-align:left; padding:14px 16px; font:inherit; font-weight:700; font-size:14px; color:var(--indigo); cursor:pointer; }
 .cl-morning { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; margin:12px 20px 0; padding:11px 14px; border-radius:16px; font-size:13.5px; background:linear-gradient(160deg,#FFF9E8,#FDF1CF); border:1px solid rgba(201,154,59,.35); color:#6B4A07; }
 .cl-m-ok { color:var(--green); font-weight:700; } .cl-m-bad { color:var(--red); font-weight:700; } .cl-m-n { color:#8F6208; font-weight:700; }
+
+/* ---- first-run checklist, quick actions, add person ---- */
+.setup { margin:14px 18px 0; padding:14px 14px 8px; border-radius:22px; background:linear-gradient(160deg,#fff,#F3F5FD); border:1px solid rgba(27,36,102,.10); box-shadow:0 16px 32px -22px rgba(20,26,51,.55), inset 0 1px 0 #fff; }
+.setup-h { display:flex; align-items:center; gap:12px; padding:0 2px 10px; }
+.setup-h > div { flex:1; display:flex; flex-direction:column; gap:2px; } .setup-h b { font-size:16px; letter-spacing:-.01em; } .setup-h span { font-size:12.5px; color:var(--ink-soft,#5B6382); }
+.setup-ring circle:last-of-type { transition:stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1); }
+.setup-x { width:30px; height:30px; border-radius:50%; border:0; background:rgba(27,36,102,.07); color:#5B6382; font-size:20px; line-height:1; cursor:pointer; align-self:flex-start; }
+.setup-row { width:100%; display:flex; align-items:center; gap:12px; text-align:left; padding:10px 8px; margin:0 0 2px; border:0; border-radius:16px; background:none; font:inherit; color:inherit; cursor:pointer; transition:background .2s; }
+.setup-row:active { background:rgba(27,36,102,.06); } .setup-row.next { background:rgba(27,36,102,.06); }
+.setup-dot { flex:none; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:13px; font-weight:800; color:#1B2466; border:2px solid rgba(27,36,102,.22); }
+.setup-row.next .setup-dot { background:#1B2466; border-color:#1B2466; color:#fff; box-shadow:0 8px 14px -8px rgba(27,36,102,.9); }
+.setup-row.done .setup-dot { background:#0F7F55; border-color:#0F7F55; color:#fff; }
+.setup-t { flex:1; display:flex; flex-direction:column; gap:1px; } .setup-t b { font-size:14.5px; } .setup-t i { font-style:normal; font-size:12.5px; color:#5B6382; }
+.setup-row.done .setup-t b { text-decoration:line-through; color:#8A91AD; font-weight:600; } .setup-row.done .setup-t i { display:none; } .setup-row:disabled { cursor:default; }
+.setup-go { font-size:22px; color:#1B2466; }
+.qa { display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+.qa-main { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:14px; border:0; border-radius:18px; font:inherit; font-weight:800; font-size:16px; color:#fff; cursor:pointer; background:linear-gradient(160deg,#2B37A0,#1B2466 70%); box-shadow:0 16px 26px -14px rgba(27,36,102,.85), inset 0 1px 0 rgba(255,255,255,.2); }
+.qa-main:active, .qa-b:active, .qa-save:active { transform:scale(.97); }
+.qa-row { display:flex; gap:8px; } .qa-b { flex:1; display:flex; align-items:center; justify-content:center; gap:7px; padding:11px 6px; border-radius:16px; border:1px solid rgba(27,36,102,.14); background:#fff; color:#1B2466; font:inherit; font-weight:700; font-size:14px; text-decoration:none; cursor:pointer; }
+.qa-b.qa-wa { background:#E4F6EE; border-color:#BDE6D3; color:#0F7F55; } .qa-b svg { flex:none; }
+.qa-collect { text-align:left; padding:14px; border-radius:18px; background:#F3F5FD; border:1px solid rgba(27,36,102,.12); }
+.qa-collect-h { font-weight:800; font-size:15px; margin-bottom:8px; }
+.qa-collect-row { display:flex; align-items:center; gap:6px; background:#fff; border:1.5px solid #1B2466; border-radius:14px; padding:2px 14px; }
+.qa-naira { font-size:22px; font-weight:800; color:#1B2466; } .qa-collect-row input { border:0 !important; outline:0; box-shadow:none !important; background:none !important; font-size:26px !important; font-weight:800; letter-spacing:-.02em; width:100%; padding:10px 0; }
+.qa-chips { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; } .qa-collect-note { font-size:12px; color:#5B6382; margin-top:8px; }
+.qa-collect-btns { display:flex; gap:8px; margin-top:12px; } .qa-cancel { flex:0 0 auto; padding:13px 18px; border-radius:14px; border:1px solid rgba(27,36,102,.16); background:#fff; font:inherit; font-weight:700; color:#5B6382; cursor:pointer; }
+.qa-save { flex:1; padding:13px; border:0; border-radius:14px; font:inherit; font-weight:800; color:#fff; background:#0F7F55; cursor:pointer; box-shadow:0 12px 20px -12px rgba(15,127,85,.9); }
+.pick-contact { display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:13px 14px; margin-bottom:14px; border-radius:18px; border:1.5px dashed rgba(27,36,102,.3); background:#F3F5FD; color:#1B2466; font:inherit; cursor:pointer; }
+.pick-contact span { display:flex; flex-direction:column; } .pick-contact b { font-size:15px; } .pick-contact i { font-style:normal; font-size:12.5px; color:#5B6382; }
+.more-opt { margin-top:4px; } .more-opt summary { cursor:pointer; font-weight:700; font-size:14px; color:#1B2466; padding:8px 0; list-style:none; } .more-opt summary::-webkit-details-marker { display:none; } .more-opt summary::before { content:"+ "; font-weight:800; } .more-opt[open] summary::before { content:"− "; }
+@media (prefers-reduced-motion:reduce) { .setup-ring circle:last-of-type { transition:none; } }
 </style>
 </head>
 <body>
@@ -1313,7 +1344,9 @@ document.addEventListener("visibilitychange", () => {
       let listHtml = "";
       if (tab === "today") {
         listHtml += `<div class="glance-note">Collect from the top first</div>`;
-        if (today.length === 0) listHtml += `<div class="empty"><div class="empty-title">Nobody owes you right now</div></div>`;
+        if (today.length === 0) listHtml += debtors.length === 0
+          ? `<div class="empty"><div class="empty-title">Your book is empty</div><div class="empty-sub">People who owe you will show up here, biggest debt first.</div></div>`
+          : `<div class="empty"><div class="empty-title">Nobody owes you right now 🎉</div><div class="empty-sub">Everyone has paid up.</div></div>`;
         listHtml += today.map((d) => glanceRow(d, false)).join("");
       } else {
         if (all.length === 0) listHtml += `<div class="empty"><div class="empty-title">Nobody on the book yet</div><div class="empty-sub">Tap + to add someone.</div></div>`;
@@ -1358,7 +1391,7 @@ document.addEventListener("visibilitychange", () => {
             ${!isStandalone() ? `<button class="iconbtn" id="installBtn" style="position:absolute; top:20px; right:64px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.install}</button>` : ""}
             <button class="iconbtn" id="settingsBtn" style="position:absolute; top:20px; right:${isStandalone() ? "64" : "110"}px; background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#F3EFE1;">${icon.settings}</button>
           </div>
-          ${birthdayBanner}
+          ${bzSetupCard()}${birthdayBanner}
           ${overdueBanner}${clMorningCard()}
           ${upgradeBanner}
           <div class="tabs">
@@ -1405,7 +1438,7 @@ document.addEventListener("visibilitychange", () => {
           <div class="balance-card">
             <div class="balance-label">Balance owed</div>
             <div class="balance-amount${bal === 0 ? " balance-amount--clear" : ""}">${fmt(bal)}</div>
-            <button class="wa-btn" data-b="shareStmt" style="border:none; cursor:pointer; font-family:inherit;">${icon.wa} Send reminder</button>
+            ${bzQuick(d, bal)}
             ${bzTrustCard(d)}
             ${d.birthday ? `<div class="stage-hint" style="margin-top:8px;">🎂 Birthday: ${esc(d.birthday)}</div>` : ""}
           </div>
@@ -1742,9 +1775,10 @@ document.addEventListener("visibilitychange", () => {
           <div style="width:36px"></div>
         </div>
         <div class="form">
-          <label>Name <input id="nameInput" placeholder="e.g. Chioma" /></label>
-          <label>Phone <span class="optional">(optional)</span> <input id="phoneInput" placeholder="080…" /></label>
-          <label>Birthday <span class="optional">(optional, for birthday greetings)</span> <input id="birthdayInput" type="date" /></label>
+          ${bzHasContacts() ? `<button type="button" class="pick-contact" data-b="pickContact">${bzIco.contact}<span><b>Pick from your contacts</b><i>Fills in the name and number for you</i></span></button>` : ""}
+          <label>Name <input id="nameInput" placeholder="e.g. Chioma" autocomplete="off" autocapitalize="words" /></label>
+          <label>Phone <span class="optional">(optional)</span> <input id="phoneInput" type="tel" inputmode="tel" autocomplete="off" placeholder="080…" /></label>
+          <details class="more-opt"><summary>Add a birthday for greetings</summary><label>Birthday <input id="birthdayInput" type="date" /></label></details>
         </div>
         <button class="primary-btn" id="saveDebtorBtn" disabled>Save</button>
       </div>`;
@@ -3141,6 +3175,7 @@ function bzSettingsCard() {
       <div class="quickadd-label" style="margin-top:16px;">Text size</div>
       <div class="biz-pay" style="margin-top:8px;"><button class="chip${bzBigOn() ? "" : " chip--active"}" data-b="bigOff">Normal</button><button class="chip${bzBigOn() ? " chip--active" : ""}" data-b="bigOn">Bigger</button></div>
       <button class="ghost-btn" data-b="guideShow" style="margin-top:10px;width:100%;justify-content:center;">Show the how-to guide</button>
+      <button class="ghost-btn" data-b="invite" style="margin-top:10px;width:100%;justify-content:center;gap:8px;">${bzIco.share} Invite a trader to MyTab</button>
       <a class="ghost-btn" href="https://wa.me/2347068655350?text=Hello%20MyTab%2C%20I%20need%20help" target="_blank" rel="noopener" style="margin-top:10px;width:100%;justify-content:center;text-decoration:none;box-sizing:border-box;">Need help? Chat with us on WhatsApp</a>
       <button class="ghost-btn" data-b="deleteAccount" style="margin-top:18px;width:100%;justify-content:center;color:var(--red);border-color:var(--red-bg);">Delete my account</button>
       ${!isPro() && BZ_BETA ? `<button class="ghost-btn" data-b="togglePreview" style="margin-top:8px;width:100%;justify-content:center;">${bizPro() ? "Turn off Pro preview" : "Preview Pro charts (beta)"}</button>` : ""}
@@ -3244,6 +3279,100 @@ const BZ = {
   syncNow: () => { bzLastRev = null; bzTick(true); flash("Updating…"); },
   bkImport: () => { const f = document.getElementById("bkFile"); if (f) f.click(); },
 };
+/* ---------- first-run checklist, invite, contacts, collect ---------- */
+const bzIco = {
+  contact: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>',
+  phone: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>',
+  chat: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2-5.4A8.5 8.5 0 1 1 21 11.5z"/></svg>',
+  cash: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="3"/><circle cx="12" cy="12" r="2.6"/></svg>',
+  check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  share: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v14"/></svg>',
+};
+const BZ_SETUP_HIDE = "mytab_setup_hide_v1", BZ_INVITED = "mytab_invited_v1";
+const bzLS = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const bzLSset = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+let bzCollecting = null;
+const bzHasContacts = () => !!(navigator.contacts && navigator.contacts.select);
+const bzInviteText = () => "I use MyTab to keep track of who owes my shop and to close my day in 60 seconds. It is free to start: https://mytab.com.ng";
+function bzSetupSteps() {
+  const b = bizData();
+  return [
+    { k: "cust", done: debtors.some((d) => d.entries.length > 0), t: "Write down someone who owes you", s: "A customer and what they took, takes 20 seconds", go: "goStepCust" },
+    { k: "sale", done: b.sales.length > 0, t: "Record a sale", s: "Tap what you sold, or just say it", go: "goStepSale" },
+    { k: "close", done: b.closes.length > 0, t: "Close your first day", s: "Count the cash, see if it matches. 60 seconds", go: "goStepClose" },
+    { k: "invite", done: bzLS(BZ_INVITED) === "1", t: "Tell one trader friend", s: "They will thank you when the numbers add up", go: "invite" },
+  ];
+}
+function bzSetupCard() {
+  if (bzIsStaff() || bzLS(BZ_SETUP_HIDE) === "1" || stage !== "app") return "";
+  const steps = bzSetupSteps(), n = steps.filter((x) => x.done).length;
+  if (n === steps.length) return "";
+  const first = steps.findIndex((x) => !x.done), C = 2 * Math.PI * 17, off = C * (1 - n / steps.length);
+  const name = (getBusinessMeta().name || "").split(" ")[0];
+  return `<div class="setup">
+    <div class="setup-h">
+      <svg class="setup-ring" width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="17" fill="none" stroke="rgba(27,36,102,.12)" stroke-width="5"/><circle cx="23" cy="23" r="17" fill="none" stroke="#1B2466" stroke-width="5" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 23 23)"/><text x="23" y="27.5" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1B2466">${n}/${steps.length}</text></svg>
+      <div><b>${n === 0 ? "Let's set up " + esc(name || "your shop") : "Nice. Keep going"}</b><span>${steps.length - n} quick step${steps.length - n === 1 ? "" : "s"} to get the most from MyTab</span></div>
+      <button class="setup-x" data-b="setupHide" aria-label="Hide this checklist">×</button>
+    </div>
+    ${steps.map((x, i) => `<button class="setup-row${x.done ? " done" : ""}${i === first ? " next" : ""}" data-b="${x.go}" ${x.done ? "disabled" : ""}>
+      <span class="setup-dot">${x.done ? bzIco.check : i + 1}</span><span class="setup-t"><b>${x.t}</b><i>${x.s}</i></span>${x.done ? "" : '<span class="setup-go">›</span>'}</button>`).join("")}
+  </div>`;
+}
+function bzQuick(d, bal) {
+  const ph = d.phone ? d.phone.replace(/[^\d]/g, "") : "";
+  const wa = ph ? "https://wa.me/234" + ph.replace(/^0/, "") : "";
+  const collect = bal > 0 ? (bzCollecting === d.id
+    ? `<div class="qa-collect"><div class="qa-collect-h">How much did ${esc(d.name.split(" ")[0])} pay?</div>
+        <div class="qa-collect-row"><span class="qa-naira">₦</span><input id="collectAmt" data-ev="input" data-b="collectType" type="tel" inputmode="numeric" placeholder="0" autocomplete="off" /></div>
+        <div class="qa-chips"><button class="chip" data-b="collectFull">All ${fmt(bal)}</button>${bal >= 2000 ? `<button class="chip" data-b="collectHalf">Half ${fmt(Math.round(bal / 2))}</button>` : ""}</div>
+        <div class="qa-collect-note">Goes to the oldest debt first.</div>
+        <div class="qa-collect-btns"><button class="qa-cancel" data-b="collectCancel">Cancel</button><button class="qa-save" data-b="collectSave">Record payment</button></div></div>`
+    : `<button class="qa-main" data-b="collectOpen">${bzIco.cash}<span>Collect payment</span></button>`) : "";
+  return `<div class="qa">${collect}<div class="qa-row">
+    <button class="qa-b qa-wa" data-b="shareStmt">${icon.wa}<span>Remind</span></button>
+    ${ph ? `<a class="qa-b" href="tel:${esc(ph)}">${bzIco.phone}<span>Call</span></a><a class="qa-b" href="${wa}" target="_blank" rel="noreferrer">${bzIco.chat}<span>Chat</span></a>` : ""}</div></div>`;
+}
+function bzCollectApply() {
+  const d = debtors.find((x) => x.id === selectedId), inp = document.getElementById("collectAmt"); if (!d || !inp) return;
+  let left = Number(inp.value.replace(/\D/g, "")) || 0; const bal = balanceOf(d);
+  if (left <= 0) { flash("Enter how much they paid"); return; }
+  if (left > bal) { left = bal; flash("That is more than they owe, recorded " + fmt(bal)); }
+  const total = left;
+  [...d.entries].filter((e) => !e.paid).sort((a, b) => (a.date > b.date ? 1 : -1)).forEach((e) => {
+    if (left <= 0) return;
+    const pay = Math.min(left, e.amount - e.paidAmount); if (pay <= 0) return;
+    clLogCollect(d, pay); e.paidAmount += pay; e.paid = e.paidAmount >= e.amount; left -= pay;
+    enqueue({ type: "add_payment", debtId: e.id, amount: pay });
+  });
+  saveDebtors(); bzCollecting = null; render(); buzz();
+  flash(balanceOf(d) === 0 ? d.name.split(" ")[0] + " has cleared everything ✓" : fmt(total) + " recorded");
+}
+Object.assign(BZ, {
+  setupHide: () => { bzLSset(BZ_SETUP_HIDE, "1"); render(); },
+  goStepCust: () => { if (!debtors.length) { view = "addDebtor"; } else { selectedId = debtors[0].id; view = "detail"; addingEntry = true; } render(); },
+  goStepSale: () => { view = "sales"; window.scrollTo(0, 0); render(); },
+  goStepClose: () => { view = "close"; window.scrollTo(0, 0); render(); },
+  invite: async () => {
+    const msg = bzInviteText(); bzLSset(BZ_INVITED, "1");
+    if (navigator.share) { try { await navigator.share({ text: msg }); render(); return; } catch (e) { if (e && e.name === "AbortError") { return; } } }
+    window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank", "noopener"); render();
+  },
+  pickContact: async () => {
+    try {
+      const r = await navigator.contacts.select(["name", "tel"], { multiple: false }); if (!r || !r[0]) return;
+      const nm = (r[0].name || [])[0] || "", tel = ((r[0].tel || [])[0] || "").replace(/[^\d+]/g, "").replace(/^\+?234/, "0").replace(/^(\d{10})$/, "0$1");
+      const ni = document.getElementById("nameInput"), pi = document.getElementById("phoneInput");
+      if (ni) { ni.value = nm; ni.dispatchEvent(new Event("input")); } if (pi) pi.value = tel;
+    } catch (e) {}
+  },
+  collectOpen: () => { bzCollecting = selectedId; render(); const i = document.getElementById("collectAmt"); if (i) i.focus(); },
+  collectCancel: () => { bzCollecting = null; render(); },
+  collectType: (el) => { const v = el.value.replace(/\D/g, ""); el.value = v ? Number(v).toLocaleString("en-NG") : ""; },
+  collectFull: () => { const d = debtors.find((x) => x.id === selectedId), i = document.getElementById("collectAmt"); if (d && i) i.value = balanceOf(d).toLocaleString("en-NG"); },
+  collectHalf: () => { const d = debtors.find((x) => x.id === selectedId), i = document.getElementById("collectAmt"); if (d && i) i.value = Math.round(balanceOf(d) / 2).toLocaleString("en-NG"); },
+  collectSave: () => bzCollectApply(),
+});
 function bzWire() {
   const root = document.getElementById("phone");
   root.querySelectorAll("[data-b]").forEach((el) => {
